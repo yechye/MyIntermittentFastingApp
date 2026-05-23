@@ -1,4 +1,6 @@
 import Foundation
+
+#if os(iOS)
 import HealthKit
 
 final class HealthKitService: HealthKitServiceProtocol {
@@ -35,3 +37,14 @@ final class HealthKitService: HealthKitServiceProtocol {
         }
     }
 }
+#else
+final class HealthKitService: HealthKitServiceProtocol {
+    func requestAuthorization() async throws {
+        // HealthKit weight access is intentionally unavailable in the Mac build.
+    }
+
+    func fetchWeightSamples(from startDate: Date, to endDate: Date) async throws -> [WeightSample] {
+        []
+    }
+}
+#endif

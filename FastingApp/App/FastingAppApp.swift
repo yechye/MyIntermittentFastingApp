@@ -1,6 +1,10 @@
 import SwiftData
 import SwiftUI
 
+#if os(macOS)
+import AppKit
+#endif
+
 @main
 struct FastingAppApp: App {
     private let container: ModelContainer
@@ -18,6 +22,11 @@ struct FastingAppApp: App {
         } catch {
             fatalError("Failed to create SwiftData container: \(error)")
         }
+
+        #if os(macOS)
+        NSApplication.shared.setActivationPolicy(.regular)
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        #endif
     }
 
     var body: some Scene {

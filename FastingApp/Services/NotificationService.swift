@@ -2,13 +2,14 @@ import Foundation
 import UserNotifications
 
 final class NotificationService: NotificationServiceProtocol {
-    private let center: UNUserNotificationCenter
+    private let centerProvider: () -> UNUserNotificationCenter?
 
-    init(center: UNUserNotificationCenter = .current()) {
-        self.center = center
+    init(centerProvider: @escaping () -> UNUserNotificationCenter? = NotificationService.defaultCenter) {
+        self.centerProvider = centerProvider
     }
 
     func scheduleFastEndNotification(for session: FastingSession, elapsedMinutes: Int) {
+        guard let center = centerProvider() else { return }
         let remainingSeconds = max(1, (session.targetFastingMinutes - elapsedMinutes) * 60)
         let content = UNMutableNotificationContent()
         content.title = "Your fast is complete!"
@@ -21,11 +22,13 @@ final class NotificationService: NotificationServiceProtocol {
     }
 
     func cancelFastEndNotification(for session: FastingSession) {
+        guard let center = centerProvider() else { return }
         center.removePendingNotificationRequests(withIdentifiers: [fastEndIdentifier(for: session)])
     }
 
     func rescheduleReminder(for schedule: WeeklySchedule, notificationsEnabled: Bool) {
         cancelReminder(weekday: schedule.weekday)
+        guard let center = centerProvider() else { return }
         guard notificationsEnabled,
               schedule.reminderEnabled,
               schedule.isFastingDay,
@@ -48,12 +51,21 @@ final class NotificationService: NotificationServiceProtocol {
     }
 
     func cancelReminder(weekday: Int) {
+        guard let center = centerProvider() else { return }
         center.removePendingNotificationRequests(withIdentifiers: [reminderIdentifier(weekday: weekday)])
     }
 
     func cancelAllReminders() {
+        guard let center = centerProvider() else { return }
         let identifiers = (1...7).map(reminderIdentifier)
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
+    }
+
+    private static func defaultCenter() -> UNUserNotificationCenter? {
+        guard Bundle.main.bundleIdentifier != nil,
+              Bundle.main.bundleURL.pathExtension == "app"
+        else { return nil }
+        return .current()
     }
 
     private func fastEndIdentifier(for session: FastingSession) -> String {
