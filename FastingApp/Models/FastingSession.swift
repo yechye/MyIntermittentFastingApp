@@ -27,7 +27,7 @@ final class FastingSession {
     var notes: String?
     var createdAt: Date
     var updatedAt: Date
-    var isDeleted: Bool
+    var isSoftDeleted: Bool
     var deletedAtStorage: Date
 
     @Transient
@@ -53,9 +53,9 @@ final class FastingSession {
 
     @Transient
     var deletedAt: Date? {
-        get { isDeleted ? deletedAtStorage : nil }
+        get { isSoftDeleted ? deletedAtStorage : nil }
         set {
-            isDeleted = newValue != nil
+            isSoftDeleted = newValue != nil
             deletedAtStorage = newValue ?? .distantPast
         }
     }
@@ -84,7 +84,7 @@ final class FastingSession {
         self.notes = notes
         self.createdAt = createdAt
         self.updatedAt = updatedAt
-        self.isDeleted = deletedAt != nil
+        self.isSoftDeleted = deletedAt != nil
         self.deletedAtStorage = deletedAt ?? .distantPast
     }
 

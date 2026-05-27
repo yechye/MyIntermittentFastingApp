@@ -82,7 +82,7 @@ final class FastingSessionTests: XCTestCase {
 
         try service.softDelete(session: session)
 
-        XCTAssertTrue(session.isDeleted)
+        XCTAssertTrue(session.isSoftDeleted)
         XCTAssertEqual(session.deletedAtStorage, now)
     }
 
