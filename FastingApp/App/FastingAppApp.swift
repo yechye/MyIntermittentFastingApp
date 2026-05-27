@@ -7,6 +7,11 @@ import AppKit
 
 @main
 struct FastingAppApp: App {
+    #if os(macOS)
+    private static let macWindowWidth: CGFloat = 390
+    private static let macWindowHeight: CGFloat = 720
+    #endif
+
     private let container: ModelContainer
 
     init() {
@@ -30,6 +35,18 @@ struct FastingAppApp: App {
     }
 
     var body: some Scene {
+        #if os(macOS)
+        WindowGroup {
+            ContentView()
+                .frame(width: Self.macWindowWidth, height: Self.macWindowHeight)
+                .task {
+                    await bootstrap()
+                }
+        }
+        .defaultSize(width: Self.macWindowWidth, height: Self.macWindowHeight)
+        .windowResizability(.contentSize)
+        .modelContainer(container)
+        #else
         WindowGroup {
             ContentView()
                 .task {
@@ -37,6 +54,7 @@ struct FastingAppApp: App {
                 }
         }
         .modelContainer(container)
+        #endif
     }
 
     @MainActor
