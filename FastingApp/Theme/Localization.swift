@@ -21,6 +21,8 @@ enum AppStrings {
     static let currentTime = localized("current_time_label")
     static let endFast = localized("end_fast_button")
     static let endFastEarly = localized("end_fast_early_button")
+    static let saveAsCompleted = localized("save_as_completed_button")
+    static let saveAsSkipped = localized("save_as_skipped_button")
     static let discardFast = localized("discard_fast_button")
     static let cancel = localized("cancel_button")
     static let fastingWindow = localized("fasting_window_label")

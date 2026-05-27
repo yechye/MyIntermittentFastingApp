@@ -5,7 +5,6 @@ final class FastingSessionService: FastingSessionServiceProtocol {
     private let context: ModelContext
     private let dateProvider: DateProviding
     private let notificationService: NotificationServiceProtocol
-    private var activeSessionCache: FastingSession?
 
     init(context: ModelContext, dateProvider: DateProviding = SystemDateProvider(), notificationService: NotificationServiceProtocol) {
         self.context = context
@@ -28,35 +27,42 @@ final class FastingSessionService: FastingSessionServiceProtocol {
             createdAt: date,
             updatedAt: date
         )
-        activeSessionCache = session
+        context.insert(session)
+        try context.save()
         notificationService.scheduleFastEndNotification(for: session, elapsedMinutes: 0)
         return session
     }
 
     func endFast(session: FastingSession, at endDate: Date) throws {
         guard session.startedAt < endDate else { throw FastingError.invalidDateRange }
-        session.endedAt = endDate
         let duration = Int(endDate.timeIntervalSince(session.startedAt) / 60)
-        session.status = duration >= session.targetFastingMinutes ? .completed : .skipped
+        let status: FastingStatus = duration >= session.targetFastingMinutes ? .completed : .skipped
+        try endFast(session: session, at: endDate, status: status)
+    }
+
+    func endFast(session: FastingSession, at endDate: Date, status: FastingStatus) throws {
+        guard status == .completed || status == .skipped else { throw FastingError.invalidSessionStatus }
+        guard session.startedAt < endDate else { throw FastingError.invalidDateRange }
+        session.hasEnded = true
+        session.endedAtStorage = endDate
+        session.status = status
         session.updatedAt = dateProvider.now
-        activeSessionCache = nil
+        try context.save()
         notificationService.cancelFastEndNotification(for: session)
     }
 
     func discardFast(session: FastingSession) throws {
         let now = dateProvider.now
         session.status = .discarded
-        session.endedAt = now
+        session.hasEnded = true
+        session.endedAtStorage = now
         session.updatedAt = now
-        activeSessionCache = nil
+        try context.save()
         notificationService.cancelFastEndNotification(for: session)
     }
 
     func restoreActiveSession() throws -> FastingSession? {
-        if let activeSessionCache, activeSessionCache.status == .active, activeSessionCache.deletedAt == nil {
-            return activeSessionCache
-        }
-        return nil
+        try activeSessions().first
     }
 
     func editSession(_ session: FastingSession, startedAt: Date, endedAt: Date?, notes: String?) throws {
@@ -64,7 +70,8 @@ final class FastingSessionService: FastingSessionServiceProtocol {
             throw FastingError.invalidDateRange
         }
         session.startedAt = startedAt
-        session.endedAt = endedAt
+        session.hasEnded = endedAt != nil
+        session.endedAtStorage = endedAt ?? .distantPast
         session.notes = notes
         if let endedAt {
             let duration = Int(endedAt.timeIntervalSince(startedAt) / 60)
@@ -73,22 +80,20 @@ final class FastingSessionService: FastingSessionServiceProtocol {
             session.status = .active
         }
         session.updatedAt = dateProvider.now
-        activeSessionCache = session.status == .active ? session : nil
+        try context.save()
     }
 
     func softDelete(session: FastingSession) throws {
         let now = dateProvider.now
         session.deletedAt = now
         session.updatedAt = now
-        activeSessionCache = nil
+        try context.save()
         notificationService.cancelFastEndNotification(for: session)
     }
 
     private func activeSessions() throws -> [FastingSession] {
-        guard let activeSessionCache,
-              activeSessionCache.status == .active,
-              activeSessionCache.deletedAt == nil
-        else { return [] }
-        return [activeSessionCache]
+        let sessions = try context.fetch(FetchDescriptor<FastingSession>())
+        return sessions
+            .filter { $0.status == .active && $0.deletedAt == nil }
     }
 }

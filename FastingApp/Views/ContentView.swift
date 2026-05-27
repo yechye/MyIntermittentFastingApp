@@ -1,6 +1,12 @@
 import SwiftData
 import SwiftUI
 
+#if os(macOS)
+import AppKit
+#elseif os(iOS)
+import UIKit
+#endif
+
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \FastingPlan.name) private var plans: [FastingPlan]
@@ -10,14 +16,8 @@ struct ContentView: View {
     @State private var latestWeight: WeightSample?
     @State private var weightLoadFailed = false
     @State private var confirmation: TimerConfirmation?
-    @State private var localActiveSession: FastingSession?
 
     private var activeSession: FastingSession? {
-        if let localActiveSession,
-           localActiveSession.status == .active,
-           localActiveSession.deletedAt == nil {
-            return localActiveSession
-        }
         return sessions.first { $0.status == .active && $0.deletedAt == nil }
     }
 
@@ -87,8 +87,11 @@ struct ContentView: View {
             if let confirmation {
                 switch confirmation {
                 case .end(let session):
-                    Button(AppStrings.endFastEarly) {
-                        endFast(session)
+                    Button(AppStrings.saveAsCompleted) {
+                        endFast(session, status: .completed)
+                    }
+                    Button(AppStrings.saveAsSkipped) {
+                        endFast(session, status: .skipped)
                     }
                 case .discard(let session):
                     Button(AppStrings.discardFast, role: .destructive) {
@@ -97,6 +100,10 @@ struct ContentView: View {
                 }
             }
             Button(AppStrings.cancel, role: .cancel) {}
+        } message: {
+            if let confirmation {
+                Text(confirmation.message)
+            }
         }
     }
 
@@ -123,23 +130,19 @@ struct ContentView: View {
     }
 
     private func startFast() {
-        localActiveSession = try? makeSessionService().startFast(plan: defaultPlan, source: .timer, date: Date())
+        try? makeSessionService().startFast(plan: defaultPlan, source: .timer, date: Date())
     }
 
-    private func endFast(_ session: FastingSession) {
-        try? makeSessionService().endFast(session: session, at: Date())
-        clearLocalSessionIfNeeded(session)
+    private func endFast(_ session: FastingSession, status: FastingStatus) {
+        try? makeSessionService().endFast(
+            session: session,
+            at: TimerTestingClock.now(for: session),
+            status: status
+        )
     }
 
     private func discardFast(_ session: FastingSession) {
         try? makeSessionService().discardFast(session: session)
-        clearLocalSessionIfNeeded(session)
-    }
-
-    private func clearLocalSessionIfNeeded(_ session: FastingSession) {
-        if localActiveSession?.id == session.id {
-            localActiveSession = nil
-        }
     }
 
     private func loadLatestWeight() async {
@@ -171,7 +174,7 @@ private struct TimerScreen: View {
             let metrics = metrics(at: timeline.date)
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
-                    TimerPlanStatusBadge(planName: planName, isActive: activeSession != nil)
+                    TimerHeader(planName: planName, isActive: activeSession != nil)
 
                     TimerHero(metrics: metrics)
 
@@ -212,7 +215,8 @@ private struct TimerScreen: View {
     private func metrics(at now: Date) -> TimerMetrics {
         let targetMinutes = activeSession?.targetFastingMinutes ?? defaultPlan?.fastingMinutes ?? 960
         let startedAt = activeSession?.startedAt ?? now
-        return TimerMetrics(startedAt: startedAt, targetMinutes: targetMinutes, now: now, isActive: activeSession != nil)
+        let timerNow = activeSession.map { TimerTestingClock.now(for: $0, realNow: now) } ?? now
+        return TimerMetrics(startedAt: startedAt, targetMinutes: targetMinutes, now: timerNow, isActive: activeSession != nil)
     }
 
     private var weightText: String {
@@ -220,6 +224,67 @@ private struct TimerScreen: View {
             return weightLoadFailed ? AppStrings.appleHealthUnavailable : AppStrings.noAppleHealthReading
         }
         return "\(latestWeight.value.formatted(.number.precision(.fractionLength(1)))) \(latestWeight.unit.rawValue)"
+    }
+}
+
+private enum TimerTestingClock {
+    static let speedMultiplier: TimeInterval = 20
+
+    static func now(for session: FastingSession, realNow: Date = Date()) -> Date {
+        let elapsed = max(0, realNow.timeIntervalSince(session.startedAt))
+        return session.startedAt.addingTimeInterval(elapsed * speedMultiplier)
+    }
+}
+
+private struct TimerHeader: View {
+    let planName: String
+    let isActive: Bool
+
+    var body: some View {
+        HStack(spacing: 14) {
+            FastingLogoImage()
+
+            TimerPlanStatusBadge(planName: planName, isActive: isActive)
+
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+private struct FastingLogoImage: View {
+    var body: some View {
+        loadedImage
+            .resizable()
+            .scaledToFit()
+            .frame(width: 58, height: 58)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.timerStroke, lineWidth: 0.75)
+            }
+            .accessibilityHidden(true)
+    }
+
+    private var loadedImage: Image {
+        guard let url = Bundle.module.url(forResource: "FastingLogo", withExtension: "png") ?? Bundle.module.url(
+            forResource: "FastingLogo",
+            withExtension: "png",
+            subdirectory: "Images"
+        ) else {
+            return Image(systemName: "timer")
+        }
+
+        #if os(macOS)
+        if let image = NSImage(contentsOf: url) {
+            return Image(nsImage: image)
+        }
+        #elseif os(iOS)
+        if let image = UIImage(contentsOfFile: url.path) {
+            return Image(uiImage: image)
+        }
+        #endif
+
+        return Image(systemName: "timer")
     }
 }
 
@@ -647,8 +712,8 @@ private enum TimerConfirmation: Identifiable {
 
     var title: String {
         switch self {
-        case .end:
-            return AppStrings.localized("end_fast_early_title")
+        case .end(let session):
+            return isLongerThanTarget(session) ? AppStrings.localized("end_fast_overtime_title") : AppStrings.localized("end_fast_early_title")
         case .discard:
             return AppStrings.localized("discard_fast_title")
         }
@@ -656,11 +721,16 @@ private enum TimerConfirmation: Identifiable {
 
     var message: String {
         switch self {
-        case .end:
-            return AppStrings.localized("end_fast_early_message")
+        case .end(let session):
+            return isLongerThanTarget(session) ? AppStrings.localized("end_fast_overtime_message") : AppStrings.localized("end_fast_early_message")
         case .discard:
             return AppStrings.localized("discard_fast_message")
         }
+    }
+
+    private func isLongerThanTarget(_ session: FastingSession) -> Bool {
+        let elapsed = TimerTestingClock.now(for: session).timeIntervalSince(session.startedAt)
+        return elapsed >= TimeInterval(session.targetFastingMinutes * 60)
     }
 }
 

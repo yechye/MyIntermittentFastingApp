@@ -17,6 +17,8 @@
 "fasting_started_label" = "Fasting started";
 "current_time_label" = "Current time";
 "end_fast_button" = "End fast";
+"save_as_completed_button" = "Save as completed";
+"save_as_skipped_button" = "Save as skipped";
 "discard_fast_button" = "Discard fast";
 "end_fast_early_button" = "End fast early";
 "cancel_button" = "Cancel";
@@ -46,6 +48,8 @@
 "this_afternoon_label" = "This afternoon";
 "this_evening_label" = "This evening";
 "end_fast_early_title" = "End fast early?";
+"end_fast_overtime_title" = "You went past your goal";
 "discard_fast_title" = "Discard this fast?";
-"end_fast_early_message" = "This will finish the fast now and mark it as skipped if it is shorter than the target.";
+"end_fast_early_message" = "You still showed up today. Every fast teaches your body the rhythm, even when you stop before the plan.";
+"end_fast_overtime_message" = "Beautiful work. You passed your planned fasting window with patience and control.";
 "discard_fast_message" = "This removes the fast from your active timer and keeps it out of progress stats.";

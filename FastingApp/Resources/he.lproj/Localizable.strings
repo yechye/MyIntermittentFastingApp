@@ -17,6 +17,8 @@
 "fasting_started_label" = "הצום התחיל";
 "current_time_label" = "השעה עכשיו";
 "end_fast_button" = "סיים צום";
+"save_as_completed_button" = "שמור כהושלם";
+"save_as_skipped_button" = "שמור כדילוג";
 "discard_fast_button" = "בטל צום";
 "end_fast_early_button" = "סיים צום מוקדם";
 "cancel_button" = "ביטול";
@@ -46,6 +48,8 @@
 "this_afternoon_label" = "אחר הצהריים";
 "this_evening_label" = "הערב";
 "end_fast_early_title" = "לסיים צום מוקדם?";
+"end_fast_overtime_title" = "עברת את היעד";
 "discard_fast_title" = "לבטל את הצום הזה?";
-"end_fast_early_message" = "הפעולה תסיים את הצום עכשיו ותסמן אותו כדילוג אם הוא קצר מהיעד.";
+"end_fast_early_message" = "גם היום הופעת בשביל עצמך. כל צום עוזר לגוף ללמוד את הקצב, גם כשעוצרים לפני התוכנית.";
+"end_fast_overtime_message" = "עבודה נהדרת. עברת את חלון הצום שתכננת עם סבלנות ושליטה.";
 "discard_fast_message" = "הפעולה תסיר את הצום מהטיימר הפעיל ולא תכלול אותו בסטטיסטיקות ההתקדמות.";

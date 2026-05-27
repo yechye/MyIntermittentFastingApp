@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="$ROOT_DIR/.build/arm64-apple-macosx/debug"
 APP_DIR="$BUILD_DIR/FastingApp.app"
+RUN_ROOT="${FASTING_APP_RUN_ROOT:-$HOME/Library/Developer/FastingApp/Run}"
+RUN_APP_DIR="$RUN_ROOT/FastingApp.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
@@ -50,4 +52,7 @@ cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
 PLIST
 
 codesign --force --sign - "$APP_DIR" >/dev/null 2>&1 || true
-open "$APP_DIR"
+rm -rf "$RUN_APP_DIR"
+mkdir -p "$RUN_ROOT"
+cp -R "$APP_DIR" "$RUN_APP_DIR"
+open "$RUN_APP_DIR"

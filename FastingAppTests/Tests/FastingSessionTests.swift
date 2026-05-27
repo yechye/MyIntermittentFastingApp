@@ -16,24 +16,32 @@ final class FastingSessionTests: XCTestCase {
     }
 
     func test_startFastCreatesActiveSession() throws {
-        let (_, service, _) = try makeService()
+        let (container, service, _) = try makeService()
         let session = try service.startFast(plan: nil, source: .manual, date: .now)
+        let sessions = try fetchAll(FastingSession.self, in: container.mainContext)
 
         XCTAssertEqual(session.status, .active)
+        XCTAssertEqual(sessions.count, 1)
+        XCTAssertEqual(sessions.first?.id, session.id)
     }
 
     func test_startFastThrowsIfAlreadyActive() throws {
-        let (_, service, _) = try makeService()
+        let (container, service, notifications) = try makeService()
         _ = try service.startFast(plan: nil, source: .manual, date: .now)
+        let restartedService = FastingSessionService(
+            context: container.mainContext,
+            notificationService: notifications
+        )
 
-        XCTAssertThrowsError(try service.startFast(plan: nil, source: .manual, date: .now)) { error in
+        XCTAssertThrowsError(try restartedService.startFast(plan: nil, source: .manual, date: .now)) { error in
             XCTAssertEqual(error as? FastingError, .sessionAlreadyActive)
         }
     }
 
     func test_endFastCompletedWhenFullDuration() throws {
-        let start = Date(timeIntervalSince1970: 0)
-        let (_, service, notifications) = try makeService(now: start.addingTimeInterval(1))
+        let start = Date()
+        let (container, service, notifications) = try makeService(now: start.addingTimeInterval(1))
+        _ = container
         let session = try service.startFast(plan: nil, source: .manual, date: start)
 
         try service.endFast(session: session, at: start.addingTimeInterval(961 * 60))
@@ -43,8 +51,9 @@ final class FastingSessionTests: XCTestCase {
     }
 
     func test_endFastSkippedWhenShortDuration() throws {
-        let start = Date(timeIntervalSince1970: 0)
-        let (_, service, _) = try makeService()
+        let start = Date()
+        let (container, service, _) = try makeService()
+        _ = container
         let session = try service.startFast(plan: nil, source: .manual, date: start)
 
         try service.endFast(session: session, at: start.addingTimeInterval(30 * 60))
@@ -52,32 +61,90 @@ final class FastingSessionTests: XCTestCase {
         XCTAssertEqual(session.status, .skipped)
     }
 
+    func test_endFastCanBeSavedAsCompleted() throws {
+        let start = Date()
+        let end = start.addingTimeInterval(31 * 60)
+        let (container, service, notifications) = try makeService()
+        _ = container
+        let session = try service.startFast(plan: nil, source: .manual, date: start)
+
+        try service.endFast(session: session, at: end, status: .completed)
+
+        XCTAssertEqual(session.status, .completed)
+        XCTAssertEqual(session.endedAt, end)
+        XCTAssertEqual(notifications.cancelledFastEndIds, [session.id])
+    }
+
+    func test_endFastCanBeSavedAsSkipped() throws {
+        let start = Date()
+        let end = start.addingTimeInterval(17 * 60 * 60)
+        let (container, service, notifications) = try makeService()
+        _ = container
+        let session = try service.startFast(plan: nil, source: .manual, date: start)
+
+        try service.endFast(session: session, at: end, status: .skipped)
+
+        XCTAssertEqual(session.status, .skipped)
+        XCTAssertEqual(session.endedAt, end)
+        XCTAssertEqual(notifications.cancelledFastEndIds, [session.id])
+    }
+
+    func test_endFastRejectsInvalidDateRange() throws {
+        let start = Date()
+        let (container, service, _) = try makeService()
+        _ = container
+        let session = try service.startFast(plan: nil, source: .manual, date: start)
+
+        XCTAssertThrowsError(try service.endFast(session: session, at: start, status: .completed)) { error in
+            XCTAssertEqual(error as? FastingError, .invalidDateRange)
+        }
+    }
+
+    func test_endFastRejectsInvalidStatus() throws {
+        let start = Date()
+        let (container, service, _) = try makeService()
+        _ = container
+        let session = try service.startFast(plan: nil, source: .manual, date: start)
+
+        XCTAssertThrowsError(try service.endFast(session: session, at: start.addingTimeInterval(60), status: .active)) { error in
+            XCTAssertEqual(error as? FastingError, .invalidSessionStatus)
+        }
+    }
+
     func test_discardFastSetsDiscarded() throws {
-        let now = Date(timeIntervalSince1970: 100)
-        let (_, service, _) = try makeService(now: now)
-        let session = try service.startFast(plan: nil, source: .manual, date: .now)
+        let now = Date()
+        let (container, service, _) = try makeService(now: now)
+        let session = try service.startFast(plan: nil, source: .manual, date: now.addingTimeInterval(-60 * 60))
 
         try service.discardFast(session: session)
 
         XCTAssertEqual(session.status, .discarded)
         XCTAssertEqual(session.endedAt, now)
+        XCTAssertNil(try service.restoreActiveSession())
+        XCTAssertEqual(try fetchAll(FastingSession.self, in: container.mainContext).first?.status, .discarded)
     }
 
     func test_restoreActiveSessionAfterRestart() throws {
-        let (_, service, _) = try makeService()
+        let (container, service, notifications) = try makeService()
         let session = try service.startFast(plan: nil, source: .manual, date: .now)
+        let restartedService = FastingSessionService(
+            context: container.mainContext,
+            notificationService: notifications
+        )
 
-        XCTAssertEqual(try service.restoreActiveSession()?.id, session.id)
+        XCTAssertEqual(try restartedService.restoreActiveSession()?.id, session.id)
     }
 
     func test_restoreReturnsNilWhenNoActive() throws {
-        let (_, service, _) = try makeService()
+        let (container, service, _) = try makeService()
+        _ = container
         XCTAssertNil(try service.restoreActiveSession())
     }
 
     func test_softDeleteSetsDeletionDate() throws {
-        let now = Date(timeIntervalSince1970: 500)
-        let (_, service, _) = try makeService(now: now)
+        let now = Date()
+        let (container, service, _) = try makeService(now: now)
+        _ = container
         let session = try service.startFast(plan: nil, source: .manual, date: .now)
 
         try service.softDelete(session: session)
@@ -86,8 +153,9 @@ final class FastingSessionTests: XCTestCase {
     }
 
     func test_editSessionRecalculatesStatus() throws {
-        let start = Date(timeIntervalSince1970: 0)
-        let (_, service, _) = try makeService()
+        let start = Date()
+        let (container, service, _) = try makeService()
+        _ = container
         let session = try service.startFast(plan: nil, source: .manual, date: start)
         try service.endFast(session: session, at: start.addingTimeInterval(961 * 60))
 
@@ -97,8 +165,9 @@ final class FastingSessionTests: XCTestCase {
     }
 
     func test_editSessionValidatesDateOrder() throws {
-        let start = Date(timeIntervalSince1970: 0)
-        let (_, service, _) = try makeService()
+        let start = Date()
+        let (container, service, _) = try makeService()
+        _ = container
         let session = try service.startFast(plan: nil, source: .manual, date: start)
 
         XCTAssertThrowsError(try service.editSession(session, startedAt: start, endedAt: start.addingTimeInterval(-1), notes: nil))
@@ -107,7 +176,8 @@ final class FastingSessionTests: XCTestCase {
     func test_midnightCrossingBelongsToDayOfStart() throws {
         let calendar = Calendar.current
         let start = calendar.date(from: DateComponents(year: 2026, month: 6, day: 1, hour: 23))!
-        let (_, service, _) = try makeService()
+        let (container, service, _) = try makeService()
+        _ = container
         let session = try service.startFast(plan: nil, source: .manual, date: start)
         try service.endFast(session: session, at: start.addingTimeInterval(8 * 60 * 60))
 

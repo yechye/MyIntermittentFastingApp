@@ -7,6 +7,7 @@ enum FastingError: LocalizedError, Equatable {
     case duplicateWeekday
     case duplicateCheatDay
     case settingsMissing
+    case invalidSessionStatus
 
     var errorDescription: String? {
         switch self {
@@ -22,6 +23,8 @@ enum FastingError: LocalizedError, Equatable {
             "Only one cheat day can exist per calendar date."
         case .settingsMissing:
             "User settings could not be created."
+        case .invalidSessionStatus:
+            "The fasting session status is not valid for this action."
         }
     }
 }

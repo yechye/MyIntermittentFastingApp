@@ -26,7 +26,7 @@ final class NotificationTests: XCTestCase {
             dateProvider: MockDateProvider(.now),
             notificationService: notifications
         )
-        let start = Date(timeIntervalSince1970: 0)
+        let start = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2026, month: 5, day: 1, hour: 9))!
         let session = try service.startFast(plan: nil, source: .manual, date: start)
 
         try service.endFast(session: session, at: start.addingTimeInterval(961 * 60))
