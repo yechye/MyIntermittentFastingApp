@@ -78,7 +78,8 @@ final class FastingSessionService: FastingSessionServiceProtocol {
 
     func softDelete(session: FastingSession) throws {
         let now = dateProvider.now
-        session.deletedAt = now
+        session.isDeleted = true
+        session.deletedAtStorage = now
         session.updatedAt = now
         activeSessionCache = nil
         notificationService.cancelFastEndNotification(for: session)
