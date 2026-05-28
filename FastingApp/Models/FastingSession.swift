@@ -53,7 +53,7 @@ final class FastingSession {
 
     @Transient
     var deletedAt: Date? {
-        get { isDeleted ? deletedAtStorage : nil }
+        get { deletedAtStorage == .distantPast ? nil : deletedAtStorage }
         set {
             isDeleted = newValue != nil
             deletedAtStorage = newValue ?? .distantPast

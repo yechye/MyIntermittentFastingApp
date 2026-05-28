@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 
+@MainActor
 final class FastingSessionService: FastingSessionServiceProtocol {
     private let context: ModelContext
     private let dateProvider: DateProviding
