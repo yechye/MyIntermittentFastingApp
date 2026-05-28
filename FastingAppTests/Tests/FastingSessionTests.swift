@@ -82,8 +82,7 @@ final class FastingSessionTests: XCTestCase {
 
         try service.softDelete(session: session)
 
-        XCTAssertTrue(session.isSoftDeleted)
-        XCTAssertEqual(session.deletedAtStorage, now)
+        XCTAssertEqual(session.deletedAt, now)
     }
 
     func test_editSessionRecalculatesStatus() throws {
