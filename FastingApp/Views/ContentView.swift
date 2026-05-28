@@ -122,6 +122,7 @@ struct ContentView: View {
         plans.first { $0.name == "16:8" } ?? plans.first
     }
 
+    @MainActor
     private func makeSessionService() -> FastingSessionService {
         FastingSessionService(
             context: modelContext,
@@ -129,10 +130,12 @@ struct ContentView: View {
         )
     }
 
+    @MainActor
     private func startFast() {
         try? makeSessionService().startFast(plan: defaultPlan, source: .timer, date: Date())
     }
 
+    @MainActor
     private func endFast(_ session: FastingSession, status: FastingStatus) {
         try? makeSessionService().endFast(
             session: session,
@@ -141,6 +144,7 @@ struct ContentView: View {
         )
     }
 
+    @MainActor
     private func discardFast(_ session: FastingSession) {
         try? makeSessionService().discardFast(session: session)
     }

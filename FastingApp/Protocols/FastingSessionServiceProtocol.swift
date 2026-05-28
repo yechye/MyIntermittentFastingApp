@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 protocol FastingSessionServiceProtocol {
     func startFast(plan: FastingPlan?, source: FastingSource, date: Date) throws -> FastingSession
     func endFast(session: FastingSession, at endDate: Date) throws
