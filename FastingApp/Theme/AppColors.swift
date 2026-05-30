@@ -10,6 +10,7 @@ extension Color {
     static let lumeBackground = adaptive(light: RGB(hex: 0xFCF8FB), dark: RGB(hex: 0x101820))
     static let lumeSurface = adaptive(light: RGB(hex: 0xFFFFFF), dark: RGB(hex: 0x18222C))
     static let lumeSurfaceSoft = adaptive(light: RGB(hex: 0xF6F3F5), dark: RGB(hex: 0x202C37))
+    static let lumeHeaderSurface = adaptive(light: RGB(hex: 0xF9F9FF), dark: RGB(hex: 0x101820))
     static let lumeStroke = adaptive(light: RGB(hex: 0xEAE7EA), dark: RGB(hex: 0x31404D))
     static let lumeMuted = adaptive(light: RGB(hex: 0x737780), dark: RGB(hex: 0xADB7C2))
     static let lumePrimary = adaptive(light: RGB(hex: 0x001E40), dark: RGB(hex: 0xD5E3FF))

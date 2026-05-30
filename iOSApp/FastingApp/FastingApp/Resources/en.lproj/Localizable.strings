@@ -30,7 +30,7 @@
 "apple_health_label" = "Apple Health";
 "apple_health_unavailable_label" = "Apple Health unavailable";
 "no_apple_health_reading_label" = "No Apple Health reading";
-"app_name_label" = "Lume";
+"app_name_label" = "FeastClock";
 "fasting_active_label" = "Fasting Active";
 "ready_to_fast_label" = "Ready to Fast";
 "target_label" = "Target";

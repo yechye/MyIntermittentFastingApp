@@ -177,31 +177,33 @@ private struct TimerScreen: View {
         TimelineView(.periodic(from: .now, by: 1)) { timeline in
             let metrics = metrics(at: timeline.date)
             ScrollView {
-                VStack(spacing: 28) {
+                VStack(spacing: 0) {
                     LumeTopBar()
 
-                    TimerStatusHeader(planName: planName, isActive: activeSession != nil)
+                    VStack(spacing: 16) {
+                        TimerStatusHeader(planName: planName, isActive: activeSession != nil)
 
-                    FastingTimeline(metrics: metrics)
+                        FastingTimeline(metrics: metrics)
 
-                    TimerSummaryCards(
-                        streak: streak,
-                        weightText: weightText,
-                        hasWeightReading: latestWeight != nil
-                    )
+                        TimerActions(
+                            activeSession: activeSession,
+                            planName: planName,
+                            startFast: startFast,
+                            requestEnd: requestEnd,
+                            requestDiscard: requestDiscard
+                        )
 
-                    TimerActions(
-                        activeSession: activeSession,
-                        planName: planName,
-                        startFast: startFast,
-                        requestEnd: requestEnd,
-                        requestDiscard: requestDiscard
-                    )
+                        TimerSummaryCards(
+                            streak: streak,
+                            weightText: weightText,
+                            hasWeightReading: latestWeight != nil
+                        )
+                    }
+                    .frame(maxWidth: 448)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 18)
+                    .padding(.bottom, 24)
                 }
-                .frame(maxWidth: 448)
-                .padding(.horizontal, 20)
-                .padding(.top, 28)
-                .padding(.bottom, 28)
                 .frame(maxWidth: .infinity)
             }
             .scrollIndicators(.hidden)
@@ -239,17 +241,25 @@ private enum TimerTestingClock {
 
 private struct LumeTopBar: View {
     var body: some View {
-        HStack(spacing: 14) {
-            FastingLogoImage(size: 54, cornerRadius: 14)
+        HStack(spacing: 12) {
+            FastingLogoImage(size: 40, cornerRadius: 10, showsContainer: false)
 
-            Text(AppStrings.appName)
-                .heading3()
+            Text("FeastClock")
+                .font(.custom("Hanken Grotesk", size: 25).weight(.semibold))
                 .foregroundStyle(Color.lumePrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.86)
 
             Spacer(minLength: 0)
-
-            HeaderIcon(systemName: "gearshape")
-            ProfileHalo()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(Color.lumeHeaderSurface)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.lumeStroke.opacity(0.72))
+                .frame(height: 0.75)
         }
     }
 }
@@ -257,17 +267,25 @@ private struct LumeTopBar: View {
 private struct FastingLogoImage: View {
     var size: CGFloat = 58
     var cornerRadius: CGFloat = 16
+    var showsContainer = true
 
     var body: some View {
         loadedImage
             .resizable()
             .scaledToFit()
             .frame(width: size, height: size)
-            .background(Color.lumeSage.opacity(0.14), in: RoundedRectangle(cornerRadius: cornerRadius))
+            .background {
+                if showsContainer {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(Color.lumeSage.opacity(0.14))
+                }
+            }
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
             .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(Color.timerStroke, lineWidth: 0.75)
+                if showsContainer {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .stroke(Color.timerStroke, lineWidth: 0.75)
+                }
             }
             .accessibilityHidden(true)
     }
@@ -299,40 +317,6 @@ private struct FastingLogoImage: View {
         #endif
 
         return Image(systemName: "timer")
-    }
-}
-
-private struct HeaderIcon: View {
-    let systemName: String
-
-    var body: some View {
-        Image(systemName: systemName)
-            .font(.title2.weight(.semibold))
-            .foregroundStyle(Color.lumePrimary.opacity(0.78))
-            .frame(width: 42, height: 42)
-            .contentShape(Circle())
-    }
-}
-
-private struct ProfileHalo: View {
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [Color.lumeGold.opacity(0.35), Color.lumeSage.opacity(0.28), Color.lumePrimary.opacity(0.16)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-            FastingLogoImage(size: 30, cornerRadius: 8)
-        }
-        .frame(width: 44, height: 44)
-        .clipShape(Circle())
-        .overlay {
-            Circle().stroke(Color.lumeStroke, lineWidth: 0.75)
-        }
-        .accessibilityHidden(true)
     }
 }
 
@@ -381,12 +365,12 @@ private struct StatusChip: View {
 private struct FastingTimeline: View {
     let metrics: TimerMetrics
 
-    private let timelineHeight: CGFloat = 430
+    private let timelineHeight: CGFloat = 330
     private let centerWidth: CGFloat = 38
-    private let topY: CGFloat = 52
-    private let bottomY: CGFloat = 350
-    private let currentMinY: CGFloat = 170
-    private let currentMaxY: CGFloat = 258
+    private let topY: CGFloat = 34
+    private let bottomY: CGFloat = 264
+    private let currentMinY: CGFloat = 126
+    private let currentMaxY: CGFloat = 202
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -426,8 +410,8 @@ private struct FastingTimeline: View {
             .offset(y: bottomY)
         }
         .frame(height: timelineHeight)
-        .padding(.top, 4)
-        .padding(.bottom, 8)
+        .padding(.top, 0)
+        .padding(.bottom, 0)
     }
 
     private var currentY: CGFloat {
@@ -634,32 +618,31 @@ private struct TimerActions: View {
     var body: some View {
         VStack(spacing: 16) {
             if let activeSession {
-                TimerPrimaryActionButton(title: AppStrings.endFast) {
-                    requestEnd(activeSession)
-                }
+                HStack(spacing: 10) {
+                    TimerPrimaryActionButton(title: AppStrings.endFast) {
+                        requestEnd(activeSession)
+                    }
+                    .layoutPriority(1)
 
-                HStack(spacing: 12) {
-                    TimerSecondaryActionButton(title: AppStrings.editStartTime, systemImage: "pencil") {}
-
-                    Button(role: .destructive) {
+                    TimerEditStartButton {}
+                    TimerIconActionButton(
+                        systemName: "trash",
+                        foreground: Color.timerDestructive,
+                        background: Color.timerDestructive.opacity(0.08),
+                        stroke: Color.timerDestructive.opacity(0.24),
+                        accessibilityLabel: AppStrings.discardFast,
+                        role: .destructive
+                    ) {
                         requestDiscard(activeSession)
-                    } label: {
-                        Image(systemName: "trash")
-                            .font(.title3.weight(.semibold))
-                            .frame(width: 48, height: 48)
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color.timerDestructive)
-                    .background(Color.timerDestructive.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.timerDestructive.opacity(0.24), lineWidth: 0.75)
-                    }
-                    .accessibilityLabel(AppStrings.discardFast)
                 }
             } else {
-                TimerPrimaryActionButton(title: AppStrings.startFast(planName), action: startFast)
-                TimerSecondaryActionButton(title: AppStrings.editStartTime, systemImage: "pencil") {}
+                HStack(spacing: 10) {
+                    TimerPrimaryActionButton(title: AppStrings.startFast(planName), action: startFast)
+                        .layoutPriority(1)
+
+                    TimerEditStartButton {}
+                }
             }
         }
         .padding(.top, 4)
@@ -674,8 +657,11 @@ private struct TimerPrimaryActionButton: View {
         Button(action: action) {
             Text(title)
                 .buttonLabel()
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 18)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 17)
         }
         .buttonStyle(.plain)
         .foregroundStyle(.white)
@@ -684,20 +670,44 @@ private struct TimerPrimaryActionButton: View {
     }
 }
 
-private struct TimerSecondaryActionButton: View {
-    let title: String
-    let systemImage: String
+private struct TimerEditStartButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            Label(title, systemImage: systemImage)
-                .font(.system(size: 15, weight: .semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
+        TimerIconActionButton(
+            systemName: "pencil",
+            foreground: Color.lumeSage,
+            background: Color.lumeSage.opacity(0.1),
+            stroke: Color.lumeSage.opacity(0.24),
+            accessibilityLabel: AppStrings.editStartTime,
+            action: action
+        )
+    }
+}
+
+private struct TimerIconActionButton: View {
+    let systemName: String
+    let foreground: Color
+    let background: Color
+    let stroke: Color
+    let accessibilityLabel: String
+    var role: ButtonRole?
+    let action: () -> Void
+
+    var body: some View {
+        Button(role: role, action: action) {
+            Image(systemName: systemName)
+                .font(.title3.weight(.semibold))
+                .frame(width: 50, height: 50)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(Color.lumeSage)
+        .foregroundStyle(foreground)
+        .background(background, in: RoundedRectangle(cornerRadius: 15))
+        .overlay {
+            RoundedRectangle(cornerRadius: 15)
+                .stroke(stroke, lineWidth: 0.75)
+        }
+        .accessibilityLabel(accessibilityLabel)
     }
 }
 
