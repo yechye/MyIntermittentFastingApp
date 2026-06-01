@@ -61,6 +61,23 @@ final class FastingSessionTests: XCTestCase {
         XCTAssertEqual(session.status, .skipped)
     }
 
+    func test_endFastEarlyCanBeSavedAsCompletedOrSkipped() throws {
+        for status in [FastingStatus.completed, .skipped] {
+            let start = Date()
+            let earlyEnd = start.addingTimeInterval(30 * 60)
+            let (container, service, notifications) = try makeService()
+            let session = try service.startFast(plan: nil, source: .manual, date: start)
+
+            try service.endFast(session: session, at: earlyEnd, status: status)
+
+            let savedSession = try XCTUnwrap(fetchAll(FastingSession.self, in: container.mainContext).first)
+            XCTAssertEqual(savedSession.status, status)
+            XCTAssertEqual(savedSession.endedAt, earlyEnd)
+            XCTAssertEqual(savedSession.actualFastingMinutes, 30)
+            XCTAssertEqual(notifications.cancelledFastEndIds, [session.id])
+        }
+    }
+
     func test_endFastCanBeSavedAsCompleted() throws {
         let start = Date()
         let end = start.addingTimeInterval(31 * 60)

@@ -24,7 +24,9 @@ struct FastingAppApp: App {
         ])
         do {
             container = try ModelContainer(for: schema)
+            AppLogger.info("Created SwiftData model container", category: "Lifecycle")
         } catch {
+            AppLogger.error("Failed to create SwiftData container: \(error)", category: "Lifecycle")
             fatalError("Failed to create SwiftData container: \(error)")
         }
 
@@ -37,7 +39,7 @@ struct FastingAppApp: App {
     var body: some Scene {
         #if os(macOS)
         WindowGroup {
-            ContentView()
+            SplashContainerView()
                 .frame(width: Self.macWindowWidth, height: Self.macWindowHeight)
                 .task {
                     await bootstrap()
@@ -48,7 +50,7 @@ struct FastingAppApp: App {
         .modelContainer(container)
         #else
         WindowGroup {
-            ContentView()
+            SplashContainerView()
                 .task {
                     await bootstrap()
                 }

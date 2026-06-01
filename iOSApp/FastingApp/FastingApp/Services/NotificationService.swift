@@ -9,7 +9,10 @@ final class NotificationService: NotificationServiceProtocol {
     }
 
     func scheduleFastEndNotification(for session: FastingSession, elapsedMinutes: Int) {
-        guard let center = centerProvider() else { return }
+        guard let center = centerProvider() else {
+            AppLogger.debug("Skipping fast end notification because notification center is unavailable", category: "Notifications")
+            return
+        }
         let remainingSeconds = max(1, (session.targetFastingMinutes - elapsedMinutes) * 60)
         let content = UNMutableNotificationContent()
         content.title = "Your fast is complete!"
@@ -18,22 +21,39 @@ final class NotificationService: NotificationServiceProtocol {
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(remainingSeconds), repeats: false)
         let request = UNNotificationRequest(identifier: fastEndIdentifier(for: session), content: content, trigger: trigger)
-        Task { try? await center.add(request) }
+        Task {
+            do {
+                try await center.add(request)
+                AppLogger.info("Scheduled fast end notification for session \(session.id)", category: "Notifications")
+            } catch {
+                AppLogger.error("Failed to schedule fast end notification for session \(session.id): \(error)", category: "Notifications")
+            }
+        }
     }
 
     func cancelFastEndNotification(for session: FastingSession) {
-        guard let center = centerProvider() else { return }
+        guard let center = centerProvider() else {
+            AppLogger.debug("Skipping fast end notification cancel because notification center is unavailable", category: "Notifications")
+            return
+        }
         center.removePendingNotificationRequests(withIdentifiers: [fastEndIdentifier(for: session)])
+        AppLogger.debug("Cancelled fast end notification for session \(session.id)", category: "Notifications")
     }
 
     func rescheduleReminder(for schedule: WeeklySchedule, notificationsEnabled: Bool) {
         cancelReminder(weekday: schedule.weekday)
-        guard let center = centerProvider() else { return }
+        guard let center = centerProvider() else {
+            AppLogger.debug("Skipping reminder schedule because notification center is unavailable", category: "Notifications")
+            return
+        }
         guard notificationsEnabled,
               schedule.reminderEnabled,
               schedule.isFastingDay,
               let startTime = schedule.startTimeMinutesFromMidnight
-        else { return }
+        else {
+            AppLogger.debug("Skipping reminder for weekday \(schedule.weekday) because it is disabled or incomplete", category: "Notifications")
+            return
+        }
 
         let content = UNMutableNotificationContent()
         content.title = "Time to start your fast"
@@ -47,18 +67,33 @@ final class NotificationService: NotificationServiceProtocol {
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
         let request = UNNotificationRequest(identifier: reminderIdentifier(weekday: schedule.weekday), content: content, trigger: trigger)
-        Task { try? await center.add(request) }
+        Task {
+            do {
+                try await center.add(request)
+                AppLogger.info("Scheduled reminder for weekday \(schedule.weekday)", category: "Notifications")
+            } catch {
+                AppLogger.error("Failed to schedule reminder for weekday \(schedule.weekday): \(error)", category: "Notifications")
+            }
+        }
     }
 
     func cancelReminder(weekday: Int) {
-        guard let center = centerProvider() else { return }
+        guard let center = centerProvider() else {
+            AppLogger.debug("Skipping reminder cancel because notification center is unavailable", category: "Notifications")
+            return
+        }
         center.removePendingNotificationRequests(withIdentifiers: [reminderIdentifier(weekday: weekday)])
+        AppLogger.debug("Cancelled reminder for weekday \(weekday)", category: "Notifications")
     }
 
     func cancelAllReminders() {
-        guard let center = centerProvider() else { return }
+        guard let center = centerProvider() else {
+            AppLogger.debug("Skipping all reminder cancel because notification center is unavailable", category: "Notifications")
+            return
+        }
         let identifiers = (1...7).map(reminderIdentifier)
         center.removePendingNotificationRequests(withIdentifiers: identifiers)
+        AppLogger.debug("Cancelled all reminders", category: "Notifications")
     }
 
     private static func defaultCenter() -> UNUserNotificationCenter? {
