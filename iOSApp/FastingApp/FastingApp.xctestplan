@@ -1,0 +1,40 @@
+{
+  "configurations" : [
+    {
+      "id" : "BEC0C93C-D157-4BC6-BABA-E7DA06657F77",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:FastingApp.xcodeproj",
+      "identifier" : "72DD282B2FC9923900DE8BF0",
+      "name" : "FastingApp"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:FastingApp.xcodeproj",
+        "identifier" : "72DD28382FC9923C00DE8BF0",
+        "name" : "FastingAppTests"
+      }
+    },
+    {
+      "skippedTests" : [
+        "FastingAppUITests\/testLaunchPerformance()"
+      ],
+      "target" : {
+        "containerPath" : "container:FastingApp.xcodeproj",
+        "identifier" : "72DD28422FC9923C00DE8BF0",
+        "name" : "FastingAppUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>FeastClock - Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Shared Component Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-surface": "#2f3034",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-dim": "#dad9df",
+                        "outline-variant": "#c2c9ba",
+                        "on-error": "#ffffff",
+                        "on-surface-variant": "#42493d",
+                        "on-primary": "#ffffff",
+                        "tertiary-fixed-dim": "#c1c9bd",
+                        "primary": "#3c692b",
+                        "tertiary": "#596057",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#255015",
+                        "on-secondary-fixed-variant": "#3a475d",
+                        "surface-bright": "#faf9fe",
+                        "on-tertiary-container": "#333b33",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed": "#dde5d9",
+                        "surface-tint": "#3c692b",
+                        "on-error-container": "#93000a",
+                        "outline": "#72796c",
+                        "inverse-on-surface": "#f1f0f5",
+                        "surface-container-high": "#e9e7ed",
+                        "background": "#faf9fe",
+                        "secondary-container": "#d5e3fe",
+                        "primary-container": "#7fb069",
+                        "primary-fixed": "#bdf1a3",
+                        "secondary-fixed": "#d5e3fe",
+                        "surface-container": "#eeedf3",
+                        "on-primary-fixed": "#052100",
+                        "secondary-fixed-dim": "#b9c7e1",
+                        "error": "#ba1a1a",
+                        "secondary": "#515f75",
+                        "on-secondary-fixed": "#0d1c2f",
+                        "on-primary-container": "#174207",
+                        "primary-fixed-dim": "#a1d489",
+                        "on-background": "#1a1b1f",
+                        "tertiary-container": "#9da59a",
+                        "on-secondary-container": "#57657c",
+                        "inverse-primary": "#a1d489",
+                        "on-surface": "#1a1b1f",
+                        "surface": "#faf9fe",
+                        "on-tertiary-fixed-variant": "#414940",
+                        "surface-variant": "#e3e2e7",
+                        "on-tertiary-fixed": "#161d16",
+                        "surface-container-low": "#f4f3f8",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-highest": "#e3e2e7"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Hanken Grotesk"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "body-lg": ["Hanken Grotesk"],
+                        "display": ["Hanken Grotesk"],
+                        "label-md": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"],
+                        "label-sm": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "34px", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Hanken Grotesk', sans-serif;
+            background-color: #F9F9FF;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .ios-switch {
+            appearance: none;
+            width: 51px;
+            height: 31px;
+            background: #E5E5E5;
+            border-radius: 31px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .ios-switch:checked {
+            background: #7FB069;
+        }
+        .ios-switch::before {
+            content: '';
+            width: 27px;
+            height: 27px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+        }
+        .ios-switch:checked::before {
+            transform: translateX(20px);
+        }
+        .segmented-control {
+            background: #EFEFEF;
+            border-radius: 10px;
+            padding: 2px;
+            display: flex;
+            position: relative;
+        }
+        .segment-active-bg {
+            position: absolute;
+            top: 2px;
+            bottom: 2px;
+            left: 2px;
+            width: calc(33.33% - 2.66px);
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 1;
+        }
+        .row-divider {
+            margin-left: 52px;
+            border-bottom: 0.5px solid #E5E5E5;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="antialiased text-on-surface">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-50 bg-surface/90 backdrop-blur-md w-full h-14 flex items-center justify-between px-gutter max-w-[600px] mx-auto">
+<button aria-label="Go back" class="flex items-center justify-center w-10 h-10 -ml-2 text-primary hover:bg-surface-container-low transition-colors rounded-full">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-semibold text-on-surface"><img alt="Logo" class="w-6 h-6 mr-2 inline-block rounded-md" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTs1SQi7_7TX5VRn_thm0hiXNmxKBJOrdTKQm0DVzlPfak2KYCrZM0QUzebyNpd2wbeajSNXVNSolaQDh_heXcdKhSLiN0TAjtH7Y8xBWj4eLvLEk0TgfHAd_StpGWBsz76q-zyEXUQCLlWzgFtPzE1w2nONsPC_wnlxN0wy_rSm0-QtUbnmON0XTJTPzIB7NzB8Q3xM4cA_0RM7gzlGG0cDwR-GreAmU1QZQz00dcYFj0lQbtDpmt5uI_LlIAoMmMXw9Mfi9TC14"/>Settings</h1>
+<div class="w-10"></div> <!-- Spacer for centering title -->
+</header>
+<main class="max-w-[600px] mx-auto px-5 pb-24 pt-4">
+<!-- Section: Appearance -->
+<div class="mb-section-gap">
+<h2 class="text-label-sm font-label-sm uppercase tracking-wider text-secondary px-4 mb-2">Appearance</h2>
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden p-4">
+<div class="relative segmented-control h-12">
+<div class="segment-active-bg" id="theme-active-bg"></div>
+<button class="relative z-10 flex-1 flex items-center justify-center gap-2 text-label-md font-label-md text-on-surface" onclick="moveSegment(0)">
+<span class="material-symbols-outlined text-[20px]" data-icon="display_settings">display_settings</span>
+                        System
+                    </button>
+<button class="relative z-10 flex-1 flex items-center justify-center gap-2 text-label-md font-label-md text-on-surface" onclick="moveSegment(1)">
+<span class="material-symbols-outlined text-[20px]" data-icon="light_mode">light_mode</span>
+                        Light
+                    </button>
+<button class="relative z-10 flex-1 flex items-center justify-center gap-2 text-label-md font-label-md text-on-surface" onclick="moveSegment(2)">
+<span class="material-symbols-outlined text-[20px]" data-icon="dark_mode">dark_mode</span>
+                        Dark
+                    </button>
+</div>
+</div>
+</div>
+<!-- Section: Fasting Preferences -->
+<div class="mb-section-gap">
+<h2 class="text-label-sm font-label-sm uppercase tracking-wider text-secondary px-4 mb-2">Fasting Preferences</h2>
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+<!-- Row 1 -->
+<div class="flex items-center h-[52px] px-4 hover:bg-surface-container-low transition-colors group cursor-pointer">
+<div class="w-8 h-8 rounded-lg bg-primary-container/20 flex items-center justify-center text-primary mr-3">
+<span class="material-symbols-outlined text-[20px]" data-icon="timer">timer</span>
+</div>
+<span class="flex-1 font-body-md text-body-md">Default Plan</span>
+<span class="text-secondary font-body-md mr-1">16:8</span>
+<span class="material-symbols-outlined text-outline-variant" data-icon="chevron_right">chevron_right</span>
+</div>
+<div class="row-divider"></div>
+<!-- Row 2 -->
+<div class="flex items-center h-[52px] px-4 hover:bg-surface-container-low transition-colors group cursor-pointer">
+<div class="w-8 h-8 rounded-lg bg-primary-container/20 flex items-center justify-center text-primary mr-3">
+<span class="material-symbols-outlined text-[20px]" data-icon="schedule">schedule</span>
+</div>
+<span class="flex-1 font-body-md text-body-md">Default Start Time</span>
+<span class="text-secondary font-body-md mr-1">8:30 PM</span>
+<span class="material-symbols-outlined text-outline-variant" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- Section: Notifications -->
+<div class="mb-section-gap">
+<h2 class="text-label-sm font-label-sm uppercase tracking-wider text-secondary px-4 mb-2">Notifications</h2>
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+<div class="flex items-center h-[52px] px-4">
+<div class="w-8 h-8 rounded-lg bg-[#E8F0E4] flex items-center justify-center text-primary mr-3">
+<span class="material-symbols-outlined text-[20px]" data-icon="notifications">notifications</span>
+</div>
+<span class="flex-1 font-body-md text-body-md">Fasting Reminders</span>
+<input checked="" class="ios-switch" type="checkbox"/>
+</div>
+<div class="row-divider"></div>
+<div class="flex items-center h-[52px] px-4">
+<div class="w-8 h-8 rounded-lg bg-[#E8F0E4] flex items-center justify-center text-primary mr-3">
+<span class="material-symbols-outlined text-[20px]" data-icon="restaurant">restaurant</span>
+</div>
+<span class="flex-1 font-body-md text-body-md">Eating Window Alert</span>
+<input checked="" class="ios-switch" type="checkbox"/>
+</div>
+<div class="row-divider"></div>
+<div class="flex items-center h-[52px] px-4">
+<div class="w-8 h-8 rounded-lg bg-[#E8F0E4] flex items-center justify-center text-primary mr-3">
+<span class="material-symbols-outlined text-[20px]" data-icon="done_all">done_all</span>
+</div>
+<span class="flex-1 font-body-md text-body-md">Fast Completion Alert</span>
+<input checked="" class="ios-switch" type="checkbox"/>
+</div>
+</div>
+</div>
+<!-- Section: Health -->
+<div class="mb-section-gap">
+<h2 class="text-label-sm font-label-sm uppercase tracking-wider text-secondary px-4 mb-2">Health</h2>
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+<div class="flex items-center h-[52px] px-4 cursor-pointer hover:bg-surface-container-low transition-colors">
+<div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-500 mr-3">
+<span class="material-symbols-outlined text-[20px]" data-icon="favorite" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</div>
+<span class="flex-1 font-body-md text-body-md">Apple Health</span>
+<span class="text-secondary font-body-md mr-1">Connected</span>
+<span class="material-symbols-outlined text-outline-variant" data-icon="chevron_right">chevron_right</span>
+</div>
+<div class="row-divider"></div>
+<div class="flex items-center h-[52px] px-4">
+<div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 mr-3">
+<span class="material-symbols-outlined text-[20px]" data-icon="monitor_weight">monitor_weight</span>
+</div>
+<span class="flex-1 font-body-md text-body-md">Weight Sync</span>
+<input class="ios-switch" type="checkbox"/>
+</div>
+<div class="row-divider"></div>
+<div class="flex items-center h-[52px] px-4 cursor-pointer hover:bg-surface-container-low transition-colors">
+<div class="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center text-on-surface-variant mr-3">
+<span class="material-symbols-outlined text-[20px]" data-icon="square_foot">square_foot</span>
+</div>
+<span class="flex-1 font-body-md text-body-md">Weight Unit</span>
+<span class="text-secondary font-body-md mr-1">kg</span>
+<span class="material-symbols-outlined text-outline-variant" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- Section: Time & Format -->
+<div class="mb-section-gap">
+<h2 class="text-label-sm font-label-sm uppercase tracking-wider text-secondary px-4 mb-2">Time &amp; Format</h2>
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+<div class="flex items-center h-[52px] px-4 cursor-pointer hover:bg-surface-container-low transition-colors">
+<div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 mr-3">
+<span class="material-symbols-outlined text-[20px]" data-icon="watch_later">watch_later</span>
+</div>
+<span class="flex-1 font-body-md text-body-md">Time Format</span>
+<span class="text-secondary font-body-md mr-1">System</span>
+<span class="material-symbols-outlined text-outline-variant" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- Section: Data & Privacy -->
+<div class="mb-section-gap">
+<h2 class="text-label-sm font-label-sm uppercase tracking-wider text-secondary px-4 mb-2">Data &amp; Privacy</h2>
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+<div class="flex items-center h-[52px] px-4 cursor-pointer hover:bg-surface-container-low transition-colors">
+<div class="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center text-on-surface-variant mr-3">
+<span class="material-symbols-outlined text-[20px]" data-icon="export_notes">export_notes</span>
+</div>
+<span class="flex-1 font-body-md text-body-md">Export Fasting History</span>
+</div>
+<div class="row-divider"></div>
+<div class="flex items-center h-[52px] px-4 cursor-pointer hover:bg-error-container/10 transition-colors">
+<div class="w-8 h-8 rounded-lg bg-error-container/20 flex items-center justify-center text-error mr-3">
+<span class="material-symbols-outlined text-[20px]" data-icon="delete_forever">delete_forever</span>
+</div>
+<span class="flex-1 font-body-md text-body-md text-error">Reset App Data</span>
+</div>
+</div>
+<p class="mt-3 px-4 text-label-sm font-body-md text-secondary leading-relaxed">
+                Health data stays private and is only used for app features.
+            </p>
+</div>
+<!-- Section: About -->
+<div class="mb-section-gap">
+<h2 class="text-label-sm font-label-sm uppercase tracking-wider text-secondary px-4 mb-2">About</h2>
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+<div class="flex items-center h-[52px] px-4">
+<div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white mr-3 overflow-hidden">
+<img alt="FeastClock Logo" class="w-full h-full object-cover" data-alt="FeastClock Logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTs1SQi7_7TX5VRn_thm0hiXNmxKBJOrdTKQm0DVzlPfak2KYCrZM0QUzebyNpd2wbeajSNXVNSolaQDh_heXcdKhSLiN0TAjtH7Y8xBWj4eLvLEk0TgfHAd_StpGWBsz76q-zyEXUQCLlWzgFtPzE1w2nONsPC_wnlxN0wy_rSm0-QtUbnmON0XTJTPzIB7NzB8Q3xM4cA_0RM7gzlGG0cDwR-GreAmU1QZQz00dcYFj0lQbtDpmt5uI_LlIAoMmMXw9Mfi9TC14"/>
+</div>
+<span class="flex-1 font-body-md text-body-md">App Name</span>
+<span class="text-secondary font-body-md font-semibold">FeastClock</span>
+</div>
+<div class="row-divider"></div>
+<div class="flex items-center h-[52px] px-4">
+<div class="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center text-on-surface-variant mr-3">
+<span class="material-symbols-outlined text-[20px]" data-icon="info">info</span>
+</div>
+<span class="flex-1 font-body-md text-body-md">Version</span>
+<span class="text-secondary font-body-md">1.0.2</span>
+</div>
+<div class="row-divider"></div>
+<div class="flex items-center h-[52px] px-4 cursor-pointer hover:bg-surface-container-low transition-colors">
+<div class="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center text-on-surface-variant mr-3">
+<span class="material-symbols-outlined text-[20px]" data-icon="support_agent">support_agent</span>
+</div>
+<span class="flex-1 font-body-md text-body-md">Support</span>
+<span class="material-symbols-outlined text-outline-variant" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pt-2 pb-6 bg-surface/80 backdrop-blur-xl border-t border-outline-variant/30 max-w-[600px] left-1/2 -translate-x-1/2">
+<button class="flex flex-col items-center justify-center text-secondary hover:opacity-80 transition-all">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center text-secondary hover:opacity-80 transition-all">
+<span class="material-symbols-outlined" data-icon="timer">timer</span>
+<span class="font-label-sm text-label-sm">Fast</span>
+</button>
+<button class="flex flex-col items-center justify-center text-secondary hover:opacity-80 transition-all">
+<span class="material-symbols-outlined" data-icon="leaderboard">leaderboard</span>
+<span class="font-label-sm text-label-sm">Insights</span>
+</button>
+<button class="flex flex-col items-center justify-center text-primary font-semibold scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined" data-icon="settings" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-label-sm text-label-sm">Settings</span>
+</button>
+</nav>
+<script>
+        function moveSegment(index) {
+            const bg = document.getElementById('theme-active-bg');
+            const percent = index * 100;
+            bg.style.transform = `translateX(${percent}%)`;
+            
+            // Interaction feedback
+            const buttons = bg.parentElement.querySelectorAll('button');
+            buttons.forEach((btn, i) => {
+                if(i === index) {
+                    btn.classList.add('font-semibold');
+                    btn.style.opacity = '1';
+                } else {
+                    btn.classList.remove('font-semibold');
+                    btn.style.opacity = '0.7';
+                }
+            });
+        }
+
+        // Initialize state
+        moveSegment(0);
+    </script>
+</body></html>
