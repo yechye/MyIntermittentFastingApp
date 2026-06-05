@@ -41,7 +41,7 @@ struct ScheduleScreen: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
-                        Text("Weekly overview")
+                        Text(AppStrings.scheduleWeeklyOverview)
                             .font(.system(size: 12, weight: .semibold))
                             .textCase(.uppercase)
                             .foregroundStyle(Color.lumeSage)
@@ -49,7 +49,7 @@ struct ScheduleScreen: View {
                         Button {
                             showingTemplates = true
                         } label: {
-                            Label("Templates", systemImage: "square.grid.2x2")
+                            Label(AppStrings.scheduleTemplates, systemImage: "square.grid.2x2")
                                 .font(.system(size: 14, weight: .semibold))
                         }
                         .accessibilityIdentifier("schedule.templatesButton")
@@ -75,7 +75,7 @@ struct ScheduleScreen: View {
                     }
                 }
 
-                Text("Advanced weekly schedules are optional. If you are pregnant, under 18, diabetic, managing an eating-disorder history, or under medical supervision, check with a healthcare professional first.")
+                Text(AppStrings.scheduleMedicalNote)
                     .font(.system(size: 13))
                     .foregroundStyle(Color.lumeMuted)
                     .padding(.horizontal, 4)
@@ -85,7 +85,7 @@ struct ScheduleScreen: View {
             .padding(.bottom, 28)
         }
         .background(Color.timerBackground)
-        .navigationTitle("Schedule")
+        .navigationTitle(AppStrings.scheduleTitle)
         .navigationBarTitleDisplayMode(.large)
         .sheet(isPresented: $showingTemplates) {
             ScheduleTemplatePicker(
@@ -121,7 +121,7 @@ struct ScheduleScreen: View {
             .presentationDetents([.height(300)])
         }
         .confirmationDialog(
-            "Apply template?",
+            AppStrings.scheduleApplyTemplateTitle,
             isPresented: Binding(
                 get: { pendingTemplate != nil },
                 set: { if !$0 { pendingTemplate = nil } }
@@ -129,17 +129,17 @@ struct ScheduleScreen: View {
             titleVisibility: .visible
         ) {
             if let pendingTemplate {
-                Button("Apply \(pendingTemplate.title)") {
+                Button(AppStrings.scheduleApplyTemplateButton(pendingTemplate.title)) {
                     applyTemplate(pendingTemplate)
                     self.pendingTemplate = nil
                 }
                 .accessibilityIdentifier("schedule.applyTemplateButton")
             }
-            Button("Cancel", role: .cancel) {
+            Button(AppStrings.cancel, role: .cancel) {
                 pendingTemplate = nil
             }
         } message: {
-            Text("This updates the weekly schedule preview and saves it for timer expectations.")
+            Text(AppStrings.scheduleTemplateMessage)
         }
     }
 
@@ -149,13 +149,13 @@ struct ScheduleScreen: View {
                 Circle()
                     .fill(Color.lumeSage)
                     .frame(width: 8, height: 8)
-                Text("Current plan")
+                Text(AppStrings.scheduleCurrentPlan)
                     .font(.system(size: 12, weight: .semibold))
                     .textCase(.uppercase)
                     .foregroundStyle(Color.lumeSage)
             }
 
-            Text(nextFastingDay?.planName.map { "\($0) Intermittent Fasting" } ?? "Build your weekly rhythm")
+            Text(nextFastingDay?.planName.map { AppStrings.scheduleIntermittentPlan($0) } ?? AppStrings.scheduleBuildRhythm)
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(Color.lumePrimary)
 
@@ -176,9 +176,9 @@ struct ScheduleScreen: View {
 
     private var nextFastingSummary: String {
         guard let day = nextFastingDay, let start = day.startTimeMinutes else {
-            return "Choose a template or customize days one by one."
+            return AppStrings.scheduleChooseTemplate
         }
-        return "Next start: \(weekdayName(day.weekday)) at \(timeText(start))"
+        return AppStrings.scheduleNextStart(day: weekdayName(day.weekday), time: timeText(start))
     }
 
     private var planOptions: [FastingPlan] {
@@ -311,12 +311,12 @@ private struct StartTimePropagationSheet: View {
                 .background(Color.lumeSage.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Apply start time to other fasting days?")
+                Text(AppStrings.scheduleApplyStartTitle)
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(Color.lumePrimary)
                     .multilineTextAlignment(.leading)
 
-                Text("Use \(startTimeText) for the remaining fasting days too?")
+                Text(AppStrings.scheduleUseStartTime(startTimeText))
                     .font(.system(size: 15))
                     .foregroundStyle(Color.lumeMuted)
                     .multilineTextAlignment(.leading)
@@ -326,7 +326,7 @@ private struct StartTimePropagationSheet: View {
 
             VStack(spacing: 10) {
                 Button(action: apply) {
-                    Text("Apply to other days")
+                    Text(AppStrings.scheduleApplyStartButton)
                         .font(.system(size: 16, weight: .semibold))
                         .frame(maxWidth: .infinity)
                 }
@@ -335,7 +335,7 @@ private struct StartTimePropagationSheet: View {
                 .accessibilityIdentifier("schedule.applyStartTimeToOtherDaysButton")
 
                 Button(action: keepSingleDay) {
-                    Text("Keep only this day")
+                    Text(AppStrings.scheduleKeepSingleDayButton)
                         .font(.system(size: 16, weight: .semibold))
                         .frame(maxWidth: .infinity)
                 }
@@ -360,10 +360,10 @@ private enum ScheduleDayState: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .fasting: return "Fasting"
-        case .restricted: return "Restricted"
-        case .normal: return "Normal"
-        case .cheat: return "Cheat"
+        case .fasting: return AppStrings.localized("schedule_state_fasting")
+        case .restricted: return AppStrings.localized("schedule_state_restricted")
+        case .normal: return AppStrings.localized("schedule_state_normal")
+        case .cheat: return AppStrings.localized("schedule_state_cheat")
         }
     }
 }
@@ -452,27 +452,11 @@ private enum ScheduleTemplate: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 
     var title: String {
-        switch self {
-        case .beginner16_8: return "16:8 Beginner"
-        case .gentle14_10: return "14:10 Gentle"
-        case .advanced18_6: return "18:6 Advanced"
-        case .intensive20_4: return "20:4 Intensive"
-        case .weekly5_2: return "5:2 Weekly"
-        case .alternateDay: return "Alternate-Day"
-        case .custom: return "Custom"
-        }
+        AppStrings.scheduleTemplateTitle(id)
     }
 
     var subtitle: String {
-        switch self {
-        case .beginner16_8: return "16 hours fasting, 8 hours eating. Beginner-friendly."
-        case .gentle14_10: return "A softer daily eating window."
-        case .advanced18_6: return "A shorter eating window for experienced fasters."
-        case .intensive20_4: return "A focused daily window for advanced routines."
-        case .weekly5_2: return "Five normal days, two non-consecutive restricted days."
-        case .alternateDay: return "Alternating normal and restricted days."
-        case .custom: return "Start calm, then edit each weekday."
-        }
+        AppStrings.scheduleTemplateSubtitle(id)
     }
 
     var planName: String? {
@@ -553,7 +537,7 @@ private struct ScheduleDayRow: View {
                         .padding(.vertical, 3)
                         .background(badgeBackground, in: Capsule())
                     if isToday {
-                        Text("TODAY")
+                        Text(AppStrings.scheduleToday)
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 7)
@@ -596,29 +580,32 @@ private struct ScheduleDayRow: View {
 
     private var primaryText: String {
         switch draft.state {
-        case .fasting: return "\(draft.planName ?? "Custom") Window"
-        case .restricted: return "Restricted day"
-        case .normal: return "Normal day"
-        case .cheat: return "Cheat day"
+        case .fasting: return AppStrings.scheduleFastingWindow(draft.planName ?? AppStrings.scheduleTemplateTitle("custom"))
+        case .restricted: return AppStrings.scheduleRestrictedDay
+        case .normal: return AppStrings.scheduleNormalDay
+        case .cheat: return AppStrings.scheduleCheatDay
         }
     }
 
     private var detailText: String {
         switch draft.state {
         case .fasting:
-            guard let plan = draft.plan, let start = draft.startTimeMinutes else { return "Start time needed" }
-            return "Eat \(timeText((start + plan.fastingMinutes) % 1440)) - \(timeText((start + plan.fastingMinutes + plan.eatingMinutes) % 1440))"
+            guard let plan = draft.plan, let start = draft.startTimeMinutes else { return AppStrings.scheduleStartTimeNeeded }
+            return AppStrings.scheduleEatingWindow(
+                start: timeText((start + plan.fastingMinutes) % 1440),
+                end: timeText((start + plan.fastingMinutes + plan.eatingMinutes) % 1440)
+            )
         case .restricted:
-            return "\(draft.restrictedCalorieGuidance ?? 550) calorie guidance"
+            return AppStrings.scheduleCalorieGuidance(draft.restrictedCalorieGuidance ?? 550)
         case .normal:
-            return "No fasting requirement"
+            return AppStrings.scheduleNoFastingRequirement
         case .cheat:
-            return draft.cheatReason.isEmpty ? "Reminders paused" : draft.cheatReason
+            return draft.cheatReason.isEmpty ? AppStrings.scheduleRemindersPaused : draft.cheatReason
         }
     }
 
     private var trailingText: String {
-        guard draft.state == .fasting, let start = draft.startTimeMinutes else { return "Open" }
+        guard draft.state == .fasting, let start = draft.startTimeMinutes else { return AppStrings.scheduleOpen }
         return timeText(start)
     }
 
@@ -674,14 +661,14 @@ private struct ScheduleTemplatePicker: View {
                                             .font(.system(size: 20, weight: .semibold))
                                             .foregroundStyle(Color.lumePrimary)
                                         if template.isRecommended {
-                                            Text("Recommended")
+                                            Text(AppStrings.scheduleRecommended)
                                                 .font(.system(size: 10, weight: .bold))
                                                 .foregroundStyle(Color.lumeSage)
                                                 .padding(.horizontal, 7)
                                                 .padding(.vertical, 3)
                                                 .background(Color.lumeSage.opacity(0.12), in: Capsule())
                                         } else if template.isAdvanced {
-                                            Text("Advanced")
+                                            Text(AppStrings.scheduleAdvanced)
                                                 .font(.system(size: 10, weight: .bold))
                                                 .foregroundStyle(Color.orange)
                                                 .padding(.horizontal, 7)
@@ -712,11 +699,11 @@ private struct ScheduleTemplatePicker: View {
                 .padding(20)
             }
             .background(Color.timerBackground)
-            .navigationTitle("Select Template")
+            .navigationTitle(AppStrings.scheduleSelectTemplate)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                    Button(AppStrings.close) { dismiss() }
                 }
             }
         }
@@ -748,10 +735,12 @@ private struct ScheduleDayEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Day State") {
-                    Picker("Day State", selection: $draft.state) {
+                Section(AppStrings.scheduleDayState) {
+                    Picker(AppStrings.scheduleDayState, selection: $draft.state) {
                         ForEach(ScheduleDayState.allCases) { state in
-                            Text(state.title).tag(state)
+                            Text(state.title)
+                                .tag(state)
+                                .accessibilityIdentifier("schedule.editor.state.\(state.id)")
                         }
                     }
                     .pickerStyle(.segmented)
@@ -759,26 +748,26 @@ private struct ScheduleDayEditor: View {
                 }
 
                 if draft.state == .fasting {
-                    Section("Plan Selection") {
-                        Picker("Plan", selection: planBinding) {
+                    Section(AppStrings.schedulePlanSelection) {
+                        Picker(AppStrings.schedulePlan, selection: planBinding) {
                             ForEach(plans, id: \.id) { plan in
-                                Text("\(plan.name) Protocol").tag(Optional(plan))
+                                Text(AppStrings.schedulePlanProtocol(plan.name)).tag(Optional(plan))
                             }
                         }
                         .accessibilityIdentifier("schedule.editor.planPicker")
 
                         DatePicker(
-                            "Fasting Starts",
+                            AppStrings.scheduleFastingStarts,
                             selection: startTimeBinding,
                             displayedComponents: .hourAndMinute
                         )
                         .accessibilityIdentifier("schedule.editor.startTimePicker")
 
-                        Toggle("Notify me to start fasting", isOn: $draft.reminderEnabled)
+                        Toggle(AppStrings.scheduleNotifyStart, isOn: $draft.reminderEnabled)
                             .accessibilityIdentifier("schedule.editor.reminderToggle")
                     }
 
-                    Section("Fasting Preview") {
+                    Section(AppStrings.scheduleFastingPreview) {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(previewTitle)
                                 .font(.system(size: 17, weight: .semibold))
@@ -792,31 +781,31 @@ private struct ScheduleDayEditor: View {
                 }
 
                 if draft.state == .restricted {
-                    Section("Restricted Guidance") {
+                    Section(AppStrings.scheduleRestrictedGuidance) {
                         Stepper(value: restrictedCaloriesBinding, in: 300...900, step: 50) {
-                            Text("\(draft.restrictedCalorieGuidance ?? 550) calorie guidance")
+                            Text(AppStrings.scheduleCalorieGuidance(draft.restrictedCalorieGuidance ?? 550))
                         }
                         .accessibilityIdentifier("schedule.editor.restrictedCalories")
                     }
                 }
 
                 if draft.state == .cheat {
-                    Section("Cheat Day") {
-                        TextField("Reason", text: $draft.cheatReason)
+                    Section(AppStrings.scheduleCheatDaySection) {
+                        TextField(AppStrings.scheduleReason, text: $draft.cheatReason)
                             .accessibilityIdentifier("schedule.editor.cheatReason")
-                        Toggle("Exclude from streak calculations", isOn: $draft.excludesCheatDayFromStreak)
+                        Toggle(AppStrings.scheduleExcludeCheat, isOn: $draft.excludesCheatDayFromStreak)
                             .accessibilityIdentifier("schedule.editor.excludeCheatToggle")
                     }
                 }
             }
-            .navigationTitle("Edit \(dayName)")
+            .navigationTitle(AppStrings.scheduleEditDay(dayName))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(AppStrings.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(AppStrings.save) {
                         save(normalizedDraft)
                     }
                     .accessibilityIdentifier("schedule.editor.saveButton")
@@ -900,16 +889,16 @@ private struct ScheduleDayEditor: View {
 
     private var previewTitle: String {
         guard let plan = draft.plan ?? plans.first, let start = draft.startTimeMinutes else {
-            return "Choose a plan and start time."
+            return AppStrings.scheduleChoosePlanStart
         }
         let fastEnd = (start + plan.fastingMinutes) % 1440
         let eatEnd = (fastEnd + plan.eatingMinutes) % 1440
-        return "Fast \(timeText(start)) - \(timeText(fastEnd)), eat \(timeText(fastEnd)) - \(timeText(eatEnd))"
+        return AppStrings.scheduleFastPreview(start: timeText(start), fastEnd: timeText(fastEnd), eatEnd: timeText(eatEnd))
     }
 
     private var previewSubtitle: String {
         guard let plan = draft.plan ?? plans.first else { return "" }
-        return "\(plan.fastingMinutes / 60) hour fast, \(plan.eatingMinutes / 60) hour eating window"
+        return AppStrings.schedulePreviewSubtitle(fastingHours: plan.fastingMinutes / 60, eatingHours: plan.eatingMinutes / 60)
     }
 }
 

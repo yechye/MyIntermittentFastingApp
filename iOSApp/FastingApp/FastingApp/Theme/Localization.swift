@@ -39,6 +39,42 @@ enum AppStrings {
     static let burningFat = localized("burning_fat_label")
     static let metabolicSwitchActive = localized("metabolic_switch_active_label")
     static let editStartTime = localized("edit_start_time_button")
+    static let scheduleWeeklyOverview = localized("schedule_weekly_overview_label")
+    static let scheduleTemplates = localized("schedule_templates_button")
+    static let scheduleMedicalNote = localized("schedule_medical_note")
+    static let scheduleTitle = localized("schedule_title")
+    static let scheduleApplyTemplateTitle = localized("schedule_apply_template_title")
+    static let scheduleTemplateMessage = localized("schedule_template_message")
+    static let scheduleCurrentPlan = localized("schedule_current_plan_label")
+    static let scheduleBuildRhythm = localized("schedule_build_rhythm_title")
+    static let scheduleChooseTemplate = localized("schedule_choose_template_summary")
+    static let scheduleApplyStartTitle = localized("schedule_apply_start_title")
+    static let scheduleApplyStartButton = localized("schedule_apply_start_button")
+    static let scheduleKeepSingleDayButton = localized("schedule_keep_single_day_button")
+    static let scheduleToday = localized("schedule_today_label")
+    static let scheduleOpen = localized("schedule_open_label")
+    static let scheduleRestrictedDay = localized("schedule_restricted_day_label")
+    static let scheduleNormalDay = localized("schedule_normal_day_label")
+    static let scheduleCheatDay = localized("schedule_cheat_day_label")
+    static let scheduleStartTimeNeeded = localized("schedule_start_time_needed")
+    static let scheduleNoFastingRequirement = localized("schedule_no_fasting_requirement")
+    static let scheduleRemindersPaused = localized("schedule_reminders_paused")
+    static let scheduleRecommended = localized("schedule_recommended_label")
+    static let scheduleAdvanced = localized("schedule_advanced_label")
+    static let scheduleSelectTemplate = localized("schedule_select_template_title")
+    static let close = localized("close_button")
+    static let scheduleDayState = localized("schedule_day_state_section")
+    static let schedulePlanSelection = localized("schedule_plan_selection_section")
+    static let schedulePlan = localized("schedule_plan_label")
+    static let scheduleFastingStarts = localized("schedule_fasting_starts_label")
+    static let scheduleNotifyStart = localized("schedule_notify_start_label")
+    static let scheduleFastingPreview = localized("schedule_fasting_preview_section")
+    static let scheduleRestrictedGuidance = localized("schedule_restricted_guidance_section")
+    static let scheduleCheatDaySection = localized("schedule_cheat_day_section")
+    static let scheduleReason = localized("schedule_reason_placeholder")
+    static let scheduleExcludeCheat = localized("schedule_exclude_cheat_toggle")
+    static let save = localized("save_button")
+    static let scheduleChoosePlanStart = localized("schedule_choose_plan_start")
 
     static func localized(_ key: String) -> String {
         #if SWIFT_PACKAGE
@@ -88,6 +124,58 @@ enum AppStrings {
 
     static func hoursAbbreviation(_ hours: Int) -> String {
         format("hours_abbreviation_text", hours)
+    }
+
+    static func scheduleIntermittentPlan(_ planName: String) -> String {
+        format("schedule_intermittent_plan_text", planName)
+    }
+
+    static func scheduleNextStart(day: String, time: String) -> String {
+        format("schedule_next_start_text", day, time)
+    }
+
+    static func scheduleApplyTemplateButton(_ templateTitle: String) -> String {
+        format("schedule_apply_template_button", templateTitle)
+    }
+
+    static func scheduleUseStartTime(_ startTime: String) -> String {
+        format("schedule_use_start_time_message", startTime)
+    }
+
+    static func scheduleFastingWindow(_ planName: String) -> String {
+        format("schedule_fasting_window_text", planName)
+    }
+
+    static func scheduleEatingWindow(start: String, end: String) -> String {
+        format("schedule_eating_window_text", start, end)
+    }
+
+    static func scheduleCalorieGuidance(_ calories: Int) -> String {
+        format("schedule_calorie_guidance_text", calories)
+    }
+
+    static func schedulePlanProtocol(_ planName: String) -> String {
+        format("schedule_plan_protocol_text", planName)
+    }
+
+    static func scheduleEditDay(_ dayName: String) -> String {
+        format("schedule_edit_day_title", dayName)
+    }
+
+    static func scheduleFastPreview(start: String, fastEnd: String, eatEnd: String) -> String {
+        format("schedule_fast_preview_text", start, fastEnd, eatEnd)
+    }
+
+    static func schedulePreviewSubtitle(fastingHours: Int, eatingHours: Int) -> String {
+        format("schedule_preview_subtitle_text", fastingHours, eatingHours)
+    }
+
+    static func scheduleTemplateTitle(_ id: String) -> String {
+        localized("schedule_template_\(id)_title")
+    }
+
+    static func scheduleTemplateSubtitle(_ id: String) -> String {
+        localized("schedule_template_\(id)_subtitle")
     }
 
     private static func format(_ key: String, _ arguments: CVarArg...) -> String {

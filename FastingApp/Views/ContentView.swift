@@ -72,6 +72,7 @@ struct ContentView: View {
         }
         .task {
             resetTimerStateForUITestsIfNeeded()
+            seedBeginnerScheduleForUITestsIfNeeded()
             await loadLatestWeight()
         }
         .confirmationDialog(
@@ -213,6 +214,43 @@ struct ContentView: View {
             AppLogger.debug("Reset timer state for UI tests", category: "Testing")
         } catch {
             AppLogger.error("Failed to reset timer state for UI tests: \(error)", category: "Testing")
+        }
+    }
+
+    @MainActor
+    private func seedBeginnerScheduleForUITestsIfNeeded() {
+        guard ProcessInfo.processInfo.arguments.contains("-seedBeginnerScheduleForUITests") else { return }
+        let plan = defaultPlan
+        let existingWeekdays = Set(schedulesForUITests().map(\.weekday))
+        for weekday in 1...7 where !existingWeekdays.contains(weekday) {
+            modelContext.insert(
+                WeeklySchedule(
+                    weekday: weekday,
+                    plan: plan,
+                    isFastingDay: true,
+                    isCheatDay: false,
+                    startTimeMinutesFromMidnight: 20 * 60,
+                    reminderEnabled: true,
+                    templateIdentifier: "beginner16_8",
+                    updatedAt: Date()
+                )
+            )
+        }
+        do {
+            try modelContext.save()
+            AppLogger.debug("Seeded beginner schedule for UI tests", category: "Testing")
+        } catch {
+            AppLogger.error("Failed to seed beginner schedule for UI tests: \(error)", category: "Testing")
+        }
+    }
+
+    @MainActor
+    private func schedulesForUITests() -> [WeeklySchedule] {
+        do {
+            return try modelContext.fetch(FetchDescriptor<WeeklySchedule>())
+        } catch {
+            AppLogger.error("Failed to fetch schedules for UI test seed: \(error)", category: "Testing")
+            return []
         }
     }
 
