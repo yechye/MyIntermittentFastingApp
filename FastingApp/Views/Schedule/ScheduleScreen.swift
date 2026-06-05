@@ -6,8 +6,10 @@ struct ScheduleScreen: View {
     @Environment(\.locale) private var locale
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \FastingPlan.name) private var plans: [FastingPlan]
+    @Query(sort: \FastingSession.startedAt, order: .reverse) private var sessions: [FastingSession]
     @Query(sort: \WeeklySchedule.weekday) private var schedules: [WeeklySchedule]
     @State private var selectedDay: ScheduleDayDraft?
+    @State private var isEditingSchedule = false
     @State private var showingTemplates = false
     @State private var pendingTemplate: ScheduleTemplate?
     @State private var pendingStartTimePropagation: PendingStartTimePropagation?
@@ -47,6 +49,14 @@ struct ScheduleScreen: View {
                             .foregroundStyle(Color.lumeSage)
                         Spacer()
                         Button {
+                            isEditingSchedule.toggle()
+                        } label: {
+                            Label(isEditingSchedule ? AppStrings.done : AppStrings.edit, systemImage: isEditingSchedule ? "checkmark" : "pencil")
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                        .accessibilityIdentifier("schedule.editButton")
+
+                        Button {
                             showingTemplates = true
                         } label: {
                             Label(AppStrings.scheduleTemplates, systemImage: "square.grid.2x2")
@@ -58,19 +68,33 @@ struct ScheduleScreen: View {
 
                     LazyVStack(spacing: 10) {
                         ForEach(rows) { row in
-                            Button {
-                                selectedDay = row
-                                AppLogger.info("Opened schedule editor for weekday \(row.weekday)", category: "Interaction")
-                            } label: {
+                            if isEditingSchedule {
+                                Button {
+                                    selectedDay = row
+                                    AppLogger.info("Opened schedule editor for weekday \(row.weekday)", category: "Interaction")
+                                } label: {
+                                    ScheduleDayRow(
+                                        draft: row,
+                                        dayName: weekdayName(row.weekday),
+                                        isToday: calendar.component(.weekday, from: Date()) == row.weekday,
+                                        completedFast: nil,
+                                        timeText: timeText,
+                                        dateText: dateTimeText
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier("schedule.day.\(row.weekday)")
+                            } else {
                                 ScheduleDayRow(
                                     draft: row,
                                     dayName: weekdayName(row.weekday),
                                     isToday: calendar.component(.weekday, from: Date()) == row.weekday,
-                                    timeText: timeText
+                                    completedFast: completedFastSummary(for: row.weekday),
+                                    timeText: timeText,
+                                    dateText: dateTimeText
                                 )
+                                .accessibilityIdentifier("schedule.day.\(row.weekday)")
                             }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("schedule.day.\(row.weekday)")
                         }
                     }
                 }
@@ -198,6 +222,29 @@ struct ScheduleScreen: View {
         return date.formatted(date: .omitted, time: .shortened)
     }
 
+    private func dateTimeText(_ date: Date) -> String {
+        date.formatted(date: .omitted, time: .shortened)
+    }
+
+    private func completedFastSummary(for weekday: Int) -> CompletedFastSummary? {
+        let currentWeek = calendar.dateInterval(of: .weekOfYear, for: Date())
+        let completedSessions = sessions.filter { session in
+            guard session.deletedAt == nil, session.status == .completed || session.status == .skipped else { return false }
+            guard session.endedAt != nil, session.actualFastingMinutes != nil else { return false }
+            if let currentWeek, !currentWeek.contains(session.startedAt) { return false }
+            return calendar.component(.weekday, from: session.startedAt) == weekday
+        }
+        guard let session = completedSessions.first, let endedAt = session.endedAt, let actualMinutes = session.actualFastingMinutes else {
+            return nil
+        }
+        return CompletedFastSummary(
+            startedAt: session.startedAt,
+            endedAt: endedAt,
+            actualMinutes: actualMinutes,
+            plannedMinutes: session.targetFastingMinutes
+        )
+    }
+
     private func save(_ draft: ScheduleDayDraft) {
         let existing = schedules.first { $0.weekday == draft.weekday }
         let previousStartTime = existing?.startTimeMinutesFromMidnight
@@ -294,6 +341,29 @@ private struct PendingStartTimePropagation: Identifiable {
 
     var id: String {
         "\(sourceWeekday)-\(startTimeMinutes)"
+    }
+}
+
+private struct CompletedFastSummary {
+    let startedAt: Date
+    let endedAt: Date
+    let actualMinutes: Int
+    let plannedMinutes: Int
+
+    var varianceMinutes: Int {
+        actualMinutes - plannedMinutes
+    }
+
+    var varianceState: VarianceState {
+        if varianceMinutes > 0 { return .longer }
+        if varianceMinutes < 0 { return .shorter }
+        return .onTarget
+    }
+
+    enum VarianceState {
+        case longer
+        case shorter
+        case onTarget
     }
 }
 
@@ -521,7 +591,9 @@ private struct ScheduleDayRow: View {
     let draft: ScheduleDayDraft
     let dayName: String
     let isToday: Bool
+    let completedFast: CompletedFastSummary?
     let timeText: (Int) -> String
+    let dateText: (Date) -> String
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
@@ -555,6 +627,15 @@ private struct ScheduleDayRow: View {
                 Text(detailText)
                     .font(.system(size: 15))
                     .foregroundStyle(Color.lumeMuted)
+
+                if let completedFast {
+                    Text(varianceText(for: completedFast))
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(varianceColor(for: completedFast))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(varianceColor(for: completedFast).opacity(0.12), in: Capsule())
+                }
             }
 
             Spacer(minLength: 8)
@@ -579,6 +660,9 @@ private struct ScheduleDayRow: View {
     }
 
     private var primaryText: String {
+        if completedFast != nil {
+            return AppStrings.scheduleCompletedFast
+        }
         switch draft.state {
         case .fasting: return AppStrings.scheduleFastingWindow(draft.planName ?? AppStrings.scheduleTemplateTitle("custom"))
         case .restricted: return AppStrings.scheduleRestrictedDay
@@ -588,6 +672,13 @@ private struct ScheduleDayRow: View {
     }
 
     private var detailText: String {
+        if let completedFast {
+            return AppStrings.scheduleCompletedFastDetail(
+                start: dateText(completedFast.startedAt),
+                end: dateText(completedFast.endedAt),
+                duration: durationText(completedFast.actualMinutes)
+            )
+        }
         switch draft.state {
         case .fasting:
             guard let plan = draft.plan, let start = draft.startTimeMinutes else { return AppStrings.scheduleStartTimeNeeded }
@@ -605,11 +696,17 @@ private struct ScheduleDayRow: View {
     }
 
     private var trailingText: String {
+        if let completedFast {
+            return durationText(completedFast.actualMinutes)
+        }
         guard draft.state == .fasting, let start = draft.startTimeMinutes else { return AppStrings.scheduleOpen }
         return timeText(start)
     }
 
     private var trailingIcon: String {
+        if completedFast != nil {
+            return "checkmark.seal.fill"
+        }
         switch draft.state {
         case .fasting: return "clock"
         case .restricted: return "leaf"
@@ -619,6 +716,9 @@ private struct ScheduleDayRow: View {
     }
 
     private var trailingColor: Color {
+        if let completedFast {
+            return varianceColor(for: completedFast)
+        }
         switch draft.state {
         case .fasting: return Color.lumeSage
         case .restricted: return Color.orange
@@ -637,6 +737,41 @@ private struct ScheduleDayRow: View {
         case .restricted: return Color.orange
         case .normal: return Color.lumeSurfaceSoft
         case .cheat: return Color.purple
+        }
+    }
+
+    private func durationText(_ minutes: Int) -> String {
+        let hours = minutes / 60
+        let remainingMinutes = minutes % 60
+        if hours == 0 {
+            return AppStrings.scheduleDurationMinutes(remainingMinutes)
+        }
+        if remainingMinutes == 0 {
+            return AppStrings.scheduleDurationHours(hours)
+        }
+        return AppStrings.scheduleDurationHoursMinutes(hours: hours, minutes: remainingMinutes)
+    }
+
+    private func varianceText(for summary: CompletedFastSummary) -> String {
+        let difference = abs(summary.varianceMinutes)
+        switch summary.varianceState {
+        case .longer:
+            return AppStrings.scheduleFastLonger(durationText(difference))
+        case .shorter:
+            return AppStrings.scheduleFastShorter(durationText(difference))
+        case .onTarget:
+            return AppStrings.scheduleFastOnTarget
+        }
+    }
+
+    private func varianceColor(for summary: CompletedFastSummary) -> Color {
+        switch summary.varianceState {
+        case .longer:
+            return Color.lumeSage
+        case .shorter:
+            return Color.orange
+        case .onTarget:
+            return Color.lumeMuted
         }
     }
 }

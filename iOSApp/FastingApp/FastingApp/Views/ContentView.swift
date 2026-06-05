@@ -73,6 +73,7 @@ struct ContentView: View {
         .task {
             resetTimerStateForUITestsIfNeeded()
             seedBeginnerScheduleForUITestsIfNeeded()
+            seedCompletedFastForUITestsIfNeeded()
             await loadLatestWeight()
         }
         .confirmationDialog(
@@ -241,6 +242,33 @@ struct ContentView: View {
             AppLogger.debug("Seeded beginner schedule for UI tests", category: "Testing")
         } catch {
             AppLogger.error("Failed to seed beginner schedule for UI tests: \(error)", category: "Testing")
+        }
+    }
+
+    @MainActor
+    private func seedCompletedFastForUITestsIfNeeded() {
+        guard ProcessInfo.processInfo.arguments.contains("-seedCompletedFastForUITests") else { return }
+        let calendar = Calendar.current
+        let now = Date()
+        let startOfToday = calendar.startOfDay(for: now)
+        let start = calendar.date(byAdding: .hour, value: 1, to: startOfToday) ?? now
+        let end = calendar.date(byAdding: .hour, value: 17, to: start) ?? now
+        let session = FastingSession(
+            plan: defaultPlan,
+            status: .completed,
+            startedAt: start,
+            endedAt: end,
+            targetFastingMinutes: 16 * 60,
+            source: .timer,
+            createdAt: now,
+            updatedAt: now
+        )
+        modelContext.insert(session)
+        do {
+            try modelContext.save()
+            AppLogger.debug("Seeded completed fast for UI tests", category: "Testing")
+        } catch {
+            AppLogger.error("Failed to seed completed fast for UI tests: \(error)", category: "Testing")
         }
     }
 

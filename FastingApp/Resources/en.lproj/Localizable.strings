@@ -22,6 +22,8 @@
 "discard_fast_button" = "Discard fast";
 "end_fast_early_button" = "End fast early";
 "cancel_button" = "Cancel";
+"done_button" = "Done";
+"edit_button" = "Edit";
 "day_streak_label" = "day streak";
 "days_unit_label" = "days";
 "fasting_window_label" = "Fasting window";
@@ -159,3 +161,11 @@
 "schedule_template_alternateDay_subtitle" = "Alternating normal and restricted days.";
 "schedule_template_custom_title" = "Custom";
 "schedule_template_custom_subtitle" = "Start calm, then edit each weekday.";
+"schedule_completed_fast_label" = "Completed fast";
+"schedule_completed_fast_detail" = "%@ - %@, %@";
+"schedule_duration_minutes" = "%lld min";
+"schedule_duration_hours" = "%lld hr";
+"schedule_duration_hours_minutes" = "%lld hr %lld min";
+"schedule_fast_longer_label" = "%@ longer";
+"schedule_fast_shorter_label" = "%@ shorter";
+"schedule_fast_on_target_label" = "On target";

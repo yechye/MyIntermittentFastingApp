@@ -22,6 +22,8 @@
 "discard_fast_button" = "בטל צום";
 "end_fast_early_button" = "סיים צום מוקדם";
 "cancel_button" = "ביטול";
+"done_button" = "סיום";
+"edit_button" = "עריכה";
 "day_streak_label" = "רצף ימים";
 "days_unit_label" = "ימים";
 "fasting_window_label" = "חלון צום";
@@ -159,3 +161,11 @@
 "schedule_template_alternateDay_subtitle" = "ימים רגילים ומוגבלים לסירוגין.";
 "schedule_template_custom_title" = "מותאם אישית";
 "schedule_template_custom_subtitle" = "מתחילים רגוע ואז עורכים כל יום בשבוע.";
+"schedule_completed_fast_label" = "צום שהושלם";
+"schedule_completed_fast_detail" = "%@ - %@, %@";
+"schedule_duration_minutes" = "%lld דק׳";
+"schedule_duration_hours" = "%lld שע׳";
+"schedule_duration_hours_minutes" = "%lld שע׳ %lld דק׳";
+"schedule_fast_longer_label" = "%@ יותר מהתכנון";
+"schedule_fast_shorter_label" = "%@ פחות מהתכנון";
+"schedule_fast_on_target_label" = "בדיוק לפי התכנון";

@@ -74,6 +74,40 @@ final class FastingAppUITests: XCTestCase {
     }
 
     @MainActor
+    func testScheduleDayRequiresEditModeToOpenEditor() throws {
+        let app = XCUIApplication()
+        launchSchedule(in: app)
+
+        let readOnlyDay = app.descendants(matching: .any).matching(identifier: "schedule.day.2").firstMatch
+        XCTAssertTrue(readOnlyDay.waitForExistence(timeout: 5))
+        readOnlyDay.tap()
+        XCTAssertFalse(app.segmentedControls["schedule.editor.statePicker"].waitForExistence(timeout: 2))
+
+        app.buttons["schedule.editButton"].tap()
+        app.buttons["schedule.day.2"].tap()
+        XCTAssertTrue(app.segmentedControls["schedule.editor.statePicker"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testScheduleShowsCompletedFastSummaryOutsideEditMode() throws {
+        let app = XCUIApplication()
+        launchSchedule(
+            in: app,
+            extraArguments: ["-seedCompletedFastForUITests"]
+        )
+
+        let currentWeekday = Calendar.current.component(.weekday, from: Date())
+        let day = app.descendants(matching: .any).matching(identifier: "schedule.day.\(currentWeekday)").firstMatch
+        XCTAssertTrue(day.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Completed fast"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "17 hr")).firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["1 hr longer"].exists)
+
+        day.tap()
+        XCTAssertFalse(app.segmentedControls["schedule.editor.statePicker"].waitForExistence(timeout: 2))
+    }
+
+    @MainActor
     func testScheduleAsksToApplyNewFastingStartToOtherDays() throws {
         let app = XCUIApplication()
         launchSchedule(in: app)
@@ -199,6 +233,10 @@ final class FastingAppUITests: XCTestCase {
 
     @MainActor
     private func openScheduleDay(_ weekday: Int, in app: XCUIApplication) {
+        let editButton = app.buttons["schedule.editButton"]
+        if editButton.waitForExistence(timeout: 5), (editButton.label == "Edit" || editButton.label == "עריכה") {
+            editButton.tap()
+        }
         let day = app.buttons.matching(identifier: "schedule.day.\(weekday)").firstMatch
         XCTAssertTrue(day.waitForExistence(timeout: 5))
         day.tap()
@@ -226,7 +264,7 @@ final class FastingAppUITests: XCTestCase {
         if let expectedTitle {
             XCTAssertTrue(app.staticTexts[expectedTitle].waitForExistence(timeout: 8))
         } else {
-            XCTAssertTrue(app.buttons["schedule.day.2"].waitForExistence(timeout: 8))
+            XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "schedule.day.2").firstMatch.waitForExistence(timeout: 8))
         }
     }
 }

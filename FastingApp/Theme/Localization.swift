@@ -25,6 +25,8 @@ enum AppStrings {
     static let saveAsSkipped = localized("save_as_skipped_button")
     static let discardFast = localized("discard_fast_button")
     static let cancel = localized("cancel_button")
+    static let done = localized("done_button")
+    static let edit = localized("edit_button")
     static let fastingWindow = localized("fasting_window_label")
     static let eatingWindow = localized("eating_window_phase_label")
     static let notStarted = localized("not_started_label")
@@ -75,6 +77,8 @@ enum AppStrings {
     static let scheduleExcludeCheat = localized("schedule_exclude_cheat_toggle")
     static let save = localized("save_button")
     static let scheduleChoosePlanStart = localized("schedule_choose_plan_start")
+    static let scheduleCompletedFast = localized("schedule_completed_fast_label")
+    static let scheduleFastOnTarget = localized("schedule_fast_on_target_label")
 
     static func localized(_ key: String) -> String {
         #if SWIFT_PACKAGE
@@ -168,6 +172,30 @@ enum AppStrings {
 
     static func schedulePreviewSubtitle(fastingHours: Int, eatingHours: Int) -> String {
         format("schedule_preview_subtitle_text", fastingHours, eatingHours)
+    }
+
+    static func scheduleCompletedFastDetail(start: String, end: String, duration: String) -> String {
+        format("schedule_completed_fast_detail", start, end, duration)
+    }
+
+    static func scheduleDurationMinutes(_ minutes: Int) -> String {
+        format("schedule_duration_minutes", minutes)
+    }
+
+    static func scheduleDurationHours(_ hours: Int) -> String {
+        format("schedule_duration_hours", hours)
+    }
+
+    static func scheduleDurationHoursMinutes(hours: Int, minutes: Int) -> String {
+        format("schedule_duration_hours_minutes", hours, minutes)
+    }
+
+    static func scheduleFastLonger(_ duration: String) -> String {
+        format("schedule_fast_longer_label", duration)
+    }
+
+    static func scheduleFastShorter(_ duration: String) -> String {
+        format("schedule_fast_shorter_label", duration)
     }
 
     static func scheduleTemplateTitle(_ id: String) -> String {
