@@ -31,6 +31,11 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>HankenGrotesk-VariableFont_wght.ttf</string>
+		<string>HankenGrotesk-Italic-VariableFont_wght.ttf</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIImageName</key>

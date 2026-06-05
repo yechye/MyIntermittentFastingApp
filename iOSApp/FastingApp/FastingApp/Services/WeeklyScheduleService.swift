@@ -27,7 +27,11 @@ final class WeeklyScheduleService {
         isFastingDay: Bool,
         isCheatDay: Bool,
         startTime: Int?,
-        reminderEnabled: Bool
+        reminderEnabled: Bool,
+        restrictedCalorieGuidance: Int? = nil,
+        cheatReason: String? = nil,
+        excludesCheatDayFromStreak: Bool = true,
+        templateIdentifier: String? = nil
     ) throws -> WeeklySchedule {
         guard (1...7).contains(weekday) else { throw FastingError.duplicateWeekday }
         let existing = rowsByWeekday[weekday]
@@ -38,6 +42,10 @@ final class WeeklyScheduleService {
             isCheatDay: isCheatDay,
             startTimeMinutesFromMidnight: startTime,
             reminderEnabled: reminderEnabled,
+            restrictedCalorieGuidance: restrictedCalorieGuidance,
+            cheatReason: cheatReason,
+            excludesCheatDayFromStreak: excludesCheatDayFromStreak,
+            templateIdentifier: templateIdentifier,
             updatedAt: dateProvider.now
         )
         row.plan = plan
@@ -45,6 +53,10 @@ final class WeeklyScheduleService {
         row.isCheatDay = isCheatDay
         row.startTimeMinutesFromMidnight = startTime
         row.reminderEnabled = reminderEnabled
+        row.restrictedCalorieGuidance = restrictedCalorieGuidance
+        row.cheatReason = cheatReason
+        row.excludesCheatDayFromStreak = excludesCheatDayFromStreak
+        row.templateIdentifier = templateIdentifier
         row.updatedAt = dateProvider.now
         rowsByWeekday[weekday] = row
 

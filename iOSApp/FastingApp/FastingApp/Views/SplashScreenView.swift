@@ -16,7 +16,7 @@ struct SplashScreenView: View {
 }
 
 struct SplashContainerView: View {
-    @State private var isShowingSplash = true
+    @State private var isShowingSplash = !ProcessInfo.processInfo.arguments.contains("-skipSplashForUITests")
 
     var body: some View {
         ZStack {
@@ -29,6 +29,7 @@ struct SplashContainerView: View {
             }
         }
         .task {
+            guard isShowingSplash else { return }
             try? await Task.sleep(for: .milliseconds(900))
             withAnimation(.easeOut(duration: 0.28)) {
                 isShowingSplash = false

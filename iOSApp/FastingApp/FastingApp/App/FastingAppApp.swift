@@ -23,7 +23,9 @@ struct FastingAppApp: App {
             UserSettings.self
         ])
         do {
-            container = try ModelContainer(for: schema)
+            let useInMemoryStore = ProcessInfo.processInfo.arguments.contains("-useInMemoryStoreForUITests")
+            let configuration = ModelConfiguration(isStoredInMemoryOnly: useInMemoryStore)
+            container = try ModelContainer(for: schema, configurations: [configuration])
             AppLogger.info("Created SwiftData model container", category: "Lifecycle")
         } catch {
             AppLogger.error("Failed to create SwiftData container: \(error)", category: "Lifecycle")

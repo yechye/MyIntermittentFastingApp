@@ -63,6 +63,62 @@ final class FastingAppUITests: XCTestCase {
     }
 
     @MainActor
+    func testScheduleAppliesBeginnerTemplate() throws {
+        let app = XCUIApplication()
+        launchSchedule(in: app)
+
+        applyBeginnerScheduleTemplate(in: app)
+
+        XCTAssertTrue(app.staticTexts["16:8 Intermittent Fasting"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "16:8 Window")).firstMatch.exists)
+    }
+
+    @MainActor
+    func testScheduleAsksToApplyNewFastingStartToOtherDays() throws {
+        let app = XCUIApplication()
+        launchSchedule(in: app)
+        applyBeginnerScheduleTemplate(in: app)
+
+        openScheduleDay(2, in: app)
+        let statePicker = app.segmentedControls["schedule.editor.statePicker"]
+        XCTAssertTrue(statePicker.waitForExistence(timeout: 5))
+        statePicker.buttons["Cheat"].tap()
+        app.buttons["schedule.editor.saveButton"].tap()
+        XCTAssertTrue(app.staticTexts["Cheat day"].waitForExistence(timeout: 5))
+
+        openScheduleDay(2, in: app)
+        let updatedStatePicker = app.segmentedControls["schedule.editor.statePicker"]
+        XCTAssertTrue(updatedStatePicker.waitForExistence(timeout: 5))
+        updatedStatePicker.buttons["Fasting"].tap()
+        app.buttons["schedule.editor.saveButton"].tap()
+
+        XCTAssertTrue(app.buttons["schedule.applyStartTimeToOtherDaysButton"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["schedule.keepSingleDayStartTimeButton"].firstMatch.exists)
+    }
+
+    @MainActor
+    func testScheduleDayEditorCanSaveCheatDay() throws {
+        let app = XCUIApplication()
+        launchSchedule(in: app)
+
+        openScheduleDay(2, in: app)
+
+        let statePicker = app.segmentedControls["schedule.editor.statePicker"]
+        XCTAssertTrue(statePicker.waitForExistence(timeout: 5))
+        statePicker.buttons["Cheat"].tap()
+
+        let reasonField = app.textFields["schedule.editor.cheatReason"]
+        XCTAssertTrue(reasonField.waitForExistence(timeout: 5))
+        reasonField.tap()
+        reasonField.typeText("Family dinner")
+
+        app.buttons["schedule.editor.saveButton"].tap()
+
+        XCTAssertTrue(app.staticTexts["Cheat day"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Family dinner"].exists)
+    }
+
+    @MainActor
     func disabled_testLaunchPerformance() throws {
         // Rename to `testLaunchPerformance` when launch metrics should be collected.
         // This measures how long it takes to launch your application.
@@ -94,5 +150,41 @@ final class FastingAppUITests: XCTestCase {
         let actionButton = app.buttons[actionIdentifier].firstMatch
         XCTAssertTrue(actionButton.waitForExistence(timeout: 5))
         actionButton.tap()
+    }
+
+    @MainActor
+    private func applyBeginnerScheduleTemplate(in app: XCUIApplication) {
+        let templatesButton = app.buttons["schedule.templatesButton"]
+        XCTAssertTrue(templatesButton.waitForExistence(timeout: 5))
+        templatesButton.tap()
+
+        let beginnerTemplate = app.buttons["schedule.template.beginner16_8"]
+        XCTAssertTrue(beginnerTemplate.waitForExistence(timeout: 5))
+        beginnerTemplate.tap()
+
+        let applyButton = app.buttons["schedule.applyTemplateButton"].firstMatch
+        XCTAssertTrue(applyButton.waitForExistence(timeout: 5))
+        applyButton.tap()
+    }
+
+    @MainActor
+    private func openScheduleDay(_ weekday: Int, in app: XCUIApplication) {
+        let day = app.buttons.matching(identifier: "schedule.day.\(weekday)").firstMatch
+        XCTAssertTrue(day.waitForExistence(timeout: 5))
+        day.tap()
+    }
+
+    @MainActor
+    private func launchSchedule(in app: XCUIApplication) {
+        app.launchArguments = [
+            "-resetTimerForUITests",
+            "-resetScheduleForUITests",
+            "-skipSplashForUITests",
+            "-openScheduleForUITests",
+            "-useInMemoryStoreForUITests"
+        ]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Build your weekly rhythm"].waitForExistence(timeout: 8))
     }
 }

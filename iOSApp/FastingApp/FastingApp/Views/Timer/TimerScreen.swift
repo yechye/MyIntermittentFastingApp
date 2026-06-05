@@ -92,7 +92,7 @@ private struct LumeTopBar: View {
                 }
 
             Text("FeastClock")
-                .font(.system(size: 25, weight: .semibold))
+                .font(.custom("HankenGrotesk-Regular_SemiBold", size: 25))
                 .tracking(-0.7)
                 .foregroundStyle(Color.lumePrimary)
                 .lineLimit(1)

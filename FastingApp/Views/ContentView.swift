@@ -7,7 +7,7 @@ struct ContentView: View {
     @Query(sort: \FastingSession.startedAt, order: .reverse) private var sessions: [FastingSession]
     @Query(sort: \CheatDay.date, order: .reverse) private var cheatDays: [CheatDay]
     @AppStorage("selectedTheme") private var selectedThemeRaw = AppTheme.system.rawValue
-    @State private var selectedTab = AppTab.timer
+    @State private var selectedTab = ProcessInfo.processInfo.arguments.contains("-openScheduleForUITests") ? AppTab.schedule : AppTab.timer
     @State private var latestWeight: WeightSample?
     @State private var weightLoadFailed = false
     @State private var confirmation: TimerConfirmation?
@@ -40,8 +40,7 @@ struct ContentView: View {
             .tag(AppTab.timer)
 
             NavigationStack {
-                PlaceholderTab(title: AppStrings.schedule, systemImage: "calendar")
-                    .navigationTitle(AppStrings.schedule)
+                ScheduleScreen()
             }
             .tabItem {
                 Label(AppStrings.schedule, systemImage: "calendar")
@@ -198,6 +197,16 @@ struct ContentView: View {
 
         for session in sessions {
             modelContext.delete(session)
+        }
+        if ProcessInfo.processInfo.arguments.contains("-resetScheduleForUITests") {
+            let descriptor = FetchDescriptor<WeeklySchedule>()
+            do {
+                for schedule in try modelContext.fetch(descriptor) {
+                    modelContext.delete(schedule)
+                }
+            } catch {
+                AppLogger.error("Failed to fetch schedules for UI test reset: \(error)", category: "Testing")
+            }
         }
         do {
             try modelContext.save()

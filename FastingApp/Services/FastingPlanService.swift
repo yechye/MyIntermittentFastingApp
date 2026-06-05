@@ -11,13 +11,19 @@ final class FastingPlanService {
     }
 
     func createDefaultPresetsIfNeeded() throws {
-        let descriptor = FetchDescriptor<FastingPlan>(
-            predicate: #Predicate { $0.isPreset == true }
-        )
-        guard try context.fetch(descriptor).isEmpty else { return }
+        let descriptor = FetchDescriptor<FastingPlan>(predicate: #Predicate { $0.isPreset == true })
+        let existingNames = Set(try context.fetch(descriptor).map(\.name))
         let now = dateProvider.now
-        context.insert(FastingPlan.preset12_12(createdAt: now))
-        context.insert(FastingPlan.preset16_8(createdAt: now))
+        let presets = [
+            FastingPlan.preset12_12(createdAt: now),
+            FastingPlan.preset14_10(createdAt: now),
+            FastingPlan.preset16_8(createdAt: now),
+            FastingPlan.preset18_6(createdAt: now),
+            FastingPlan.preset20_4(createdAt: now)
+        ]
+        for preset in presets where !existingNames.contains(preset.name) {
+            context.insert(preset)
+        }
         try context.save()
     }
 
