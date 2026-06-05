@@ -2,13 +2,16 @@ import SwiftUI
 
 struct SplashScreenView: View {
     var body: some View {
-        Image("SplashScreen")
-            .resizable()
-            .scaledToFill()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipped()
-            .ignoresSafeArea()
-            .accessibilityLabel(AppStrings.appName)
+        ZStack {
+            Color(red: 0.98, green: 0.98, blue: 0.99)
+
+            Image("SplashScreen")
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityLabel(AppStrings.appName)
+        }
+        .ignoresSafeArea()
     }
 }
 
