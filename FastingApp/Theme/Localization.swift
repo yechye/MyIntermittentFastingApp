@@ -81,11 +81,7 @@ enum AppStrings {
     static let scheduleFastOnTarget = localized("schedule_fast_on_target_label")
 
     static func localized(_ key: String) -> String {
-        #if SWIFT_PACKAGE
-        let resourceBundle: Bundle? = .module
-        #else
         let resourceBundle: Bundle? = .main
-        #endif
 
         return String(localized: String.LocalizationValue(key), bundle: resourceBundle)
     }

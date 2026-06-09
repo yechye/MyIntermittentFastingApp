@@ -5,21 +5,13 @@ struct SplashScreenView: View {
         ZStack {
             Color(red: 0.98, green: 0.98, blue: 0.99)
 
-            Image("SplashScreen", bundle: resourceBundle)
+            Image("SplashScreen")
                 .resizable()
                 .scaledToFit()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .accessibilityLabel(AppStrings.appName)
         }
         .ignoresSafeArea()
-    }
-
-    private var resourceBundle: Bundle {
-        #if SWIFT_PACKAGE
-        return .module
-        #else
-        return .main
-        #endif
     }
 }
 

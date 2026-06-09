@@ -4,16 +4,12 @@
 
 The Schedule page is the weekly planning surface for FeastClock. It lets users review their fasting rhythm, apply a preset schedule, edit individual weekdays, and see how completed fasts compare with the planned fasting length.
 
-The current implementation lives primarily in:
+The current implementation lives in:
 
-- `iOSApp/FastingApp/FastingApp/Views/Schedule/ScheduleScreen.swift`
 - `FastingApp/Views/Schedule/ScheduleScreen.swift`
-- `iOSApp/FastingApp/FastingApp/Theme/Localization.swift`
 - `FastingApp/Theme/Localization.swift`
 - English and Hebrew `Localizable.strings`
-- `iOSApp/FastingApp/FastingAppUITests/FastingAppUITests.swift`
-
-The app keeps mirrored source trees under `iOSApp/FastingApp/FastingApp` and `FastingApp`, so schedule changes are applied to both app paths.
+- `FastingAppUITests/FastingAppUITests.swift`
 
 ## Screen Structure
 
@@ -260,4 +256,4 @@ Key principles:
 - The row model currently derives state from existing `WeeklySchedule` fields rather than a persisted day-state enum.
 - Completed fast summaries are limited to sessions started in the current calendar week.
 - The completed summary uses the session target fasting minutes for planned-length comparison.
-- The schedule implementation is mirrored in both app source trees and should be kept in sync until the project structure is consolidated.
+- The schedule implementation is part of the single root app source tree at `FastingApp/`.

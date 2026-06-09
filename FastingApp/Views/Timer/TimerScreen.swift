@@ -1,11 +1,6 @@
-import SwiftData
 import SwiftUI
-
-#if os(macOS)
-import AppKit
-#elseif os(iOS)
+import SwiftData
 import UIKit
-#endif
 
 struct TimerScreen: View {
     let activeSession: FastingSession?
@@ -92,7 +87,7 @@ private struct LumeTopBar: View {
                 }
 
             Text("FeastClock")
-                .font(.custom("Hanken Grotesk", size: 25).weight(.semibold))
+                .font(.custom("HankenGrotesk-Regular_SemiBold", size: 25))
                 .tracking(-0.7)
                 .foregroundStyle(Color.lumePrimary)
                 .lineLimit(1)
@@ -139,12 +134,7 @@ private struct FastingLogoImage: View {
     }
 
     private var loadedImage: Image {
-        let resourceBundle: Bundle
-        #if SWIFT_PACKAGE
-        resourceBundle = .module
-        #else
-        resourceBundle = .main
-        #endif
+        let resourceBundle = Bundle.main
 
         guard let url = resourceBundle.url(forResource: "FeastClockWatchLogo", withExtension: "png") ?? resourceBundle.url(
             forResource: "FeastClockWatchLogo",
@@ -162,15 +152,9 @@ private struct FastingLogoImage: View {
             return Image(systemName: "timer")
         }
 
-        #if os(macOS)
-        if let image = NSImage(contentsOf: url) {
-            return Image(nsImage: image)
-        }
-        #elseif os(iOS)
         if let image = UIImage(contentsOfFile: url.path) {
             return Image(uiImage: image)
         }
-        #endif
 
         return Image(systemName: "timer")
     }

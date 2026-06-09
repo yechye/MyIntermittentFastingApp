@@ -14,8 +14,6 @@ These rules apply to the whole repository unless a more specific rule file is ad
 - The default localization is English. Maintain support for English and Hebrew resources:
   - `FastingApp/Resources/en.lproj/Localizable.strings`
   - `FastingApp/Resources/he.lproj/Localizable.strings`
-  - `iOSApp/FastingApp/FastingApp/Resources/en.lproj/Localizable.strings`
-  - `iOSApp/FastingApp/FastingApp/Resources/he.lproj/Localizable.strings`
 - Do not hard-code user-facing strings in views or services. Add keys to `AppStrings` in `Theme/Localization.swift`, then add matching translations in both localization folders.
 - Preserve right-to-left friendliness for Hebrew: avoid layout assumptions that only work left-to-right, use SwiftUI alignment and spacing APIs, and prefer semantic labels over manually composed directional text.
 - Keep the app name `FeastClock` consistent unless the product context explicitly changes.
@@ -23,7 +21,7 @@ These rules apply to the whole repository unless a more specific rule file is ad
 ## Swift Language And Platform Rules
 
 - Use Swift 5.10-compatible language features.
-- Support the declared platforms in `Package.swift`: iOS 17+ and macOS 14+ for the Swift package target.
+- Keep the codebase focused on the root Xcode iOS app project.
 - Prefer SwiftUI, SwiftData, structured concurrency, value types, and protocol-based seams already present in the app.
 - Keep UI state on the main actor when it interacts with SwiftUI or SwiftData main contexts.
 - Use explicit error handling for user actions and persistence. Avoid silent `try?` in production paths unless the failure is intentionally non-actionable and logged.
@@ -32,10 +30,8 @@ These rules apply to the whole repository unless a more specific rule file is ad
 
 ## Code Organization
 
-- The repository has two app trees that often mirror each other:
-  - Swift package tree: `FastingApp/`
-  - Xcode app tree: `iOSApp/FastingApp/FastingApp/`
-- When changing shared app code, check whether the mirrored file also needs the same update.
+- The repository has one canonical app source tree at `FastingApp/`.
+- The Xcode project lives at `FastingApp.xcodeproj` in the repository root.
 - Keep responsibilities aligned with the existing folders:
   - `Models/` for SwiftData models and domain value types.
   - `Services/` for persistence, HealthKit, notification, settings, and session orchestration.
@@ -73,25 +69,19 @@ These rules apply to the whole repository unless a more specific rule file is ad
 
 ## Automated Testing And Verification
 
-- For package-level verification, run:
-
-  ```sh
-  swift test
-  ```
-
 - For iOS build verification, run:
 
   ```sh
-  xcodebuild -project iOSApp/FastingApp/FastingApp.xcodeproj -scheme FastingApp -destination 'generic/platform=iOS Simulator' build
+  xcodebuild -project FastingApp.xcodeproj -scheme FastingApp -destination 'generic/platform=iOS Simulator' build
   ```
 
 - For simulator UI tests, prefer a current available simulator destination, for example:
 
   ```sh
-  xcodebuild test -project iOSApp/FastingApp/FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17'
+  xcodebuild test -project FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17'
   ```
 
-- When a change affects only logic, prioritize `swift test` and targeted XCTest cases.
+- When a change affects only logic, prioritize targeted XCTest cases.
 - When a change affects app startup, assets, Info.plist, SwiftUI screens, localization, navigation, notifications, or HealthKit wiring, run an Xcode build. Add targeted UI tests when the workflow has user-visible branching or regression risk.
 - Record important successful verification commands in `design/FEASTCLOCK_APP_CONTEXT.md` when they represent a new known-good state for the project.
 
