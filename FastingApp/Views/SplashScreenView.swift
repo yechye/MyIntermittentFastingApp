@@ -2,26 +2,21 @@ import SwiftUI
 
 struct SplashScreenView: View {
     var body: some View {
-        Image("SplashScreen", bundle: resourceBundle)
-            .resizable()
-            .scaledToFill()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipped()
-            .ignoresSafeArea()
-            .accessibilityLabel(AppStrings.appName)
-    }
+        ZStack {
+            Color(red: 0.98, green: 0.98, blue: 0.99)
 
-    private var resourceBundle: Bundle {
-        #if SWIFT_PACKAGE
-        return .module
-        #else
-        return .main
-        #endif
+            Image("SplashScreen")
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityLabel(AppStrings.appName)
+        }
+        .ignoresSafeArea()
     }
 }
 
 struct SplashContainerView: View {
-    @State private var isShowingSplash = true
+    @State private var isShowingSplash = !ProcessInfo.processInfo.arguments.contains("-skipSplashForUITests")
 
     var body: some View {
         ZStack {
@@ -34,6 +29,7 @@ struct SplashContainerView: View {
             }
         }
         .task {
+            guard isShowingSplash else { return }
             try? await Task.sleep(for: .milliseconds(900))
             withAnimation(.easeOut(duration: 0.28)) {
                 isShowingSplash = false

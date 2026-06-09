@@ -12,7 +12,9 @@ final class FastingPlanTests: XCTestCase {
         try service.createDefaultPresetsIfNeeded()
 
         let plans = try fetchAll(FastingPlan.self, in: container.mainContext)
-        XCTAssertEqual(plans.filter(\.isPreset).count, 2)
+        let presets = plans.filter(\.isPreset)
+        XCTAssertEqual(presets.count, 5)
+        XCTAssertEqual(Set(presets.map(\.name)), ["12:12", "14:10", "16:8", "18:6", "20:4"])
     }
 
     func test_presetCannotBeDeleted() throws {

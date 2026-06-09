@@ -7,7 +7,7 @@ struct ContentView: View {
     @Query(sort: \FastingSession.startedAt, order: .reverse) private var sessions: [FastingSession]
     @Query(sort: \CheatDay.date, order: .reverse) private var cheatDays: [CheatDay]
     @AppStorage("selectedTheme") private var selectedThemeRaw = AppTheme.system.rawValue
-    @State private var selectedTab = AppTab.timer
+    @State private var selectedTab = ProcessInfo.processInfo.arguments.contains("-openScheduleForUITests") ? AppTab.schedule : AppTab.timer
     @State private var latestWeight: WeightSample?
     @State private var weightLoadFailed = false
     @State private var confirmation: TimerConfirmation?
@@ -40,8 +40,7 @@ struct ContentView: View {
             .tag(AppTab.timer)
 
             NavigationStack {
-                PlaceholderTab(title: AppStrings.schedule, systemImage: "calendar")
-                    .navigationTitle(AppStrings.schedule)
+                ScheduleScreen()
             }
             .tabItem {
                 Label(AppStrings.schedule, systemImage: "calendar")
@@ -73,6 +72,8 @@ struct ContentView: View {
         }
         .task {
             resetTimerStateForUITestsIfNeeded()
+            seedBeginnerScheduleForUITestsIfNeeded()
+            seedCompletedFastForUITestsIfNeeded()
             await loadLatestWeight()
         }
         .confirmationDialog(
@@ -199,11 +200,85 @@ struct ContentView: View {
         for session in sessions {
             modelContext.delete(session)
         }
+        if ProcessInfo.processInfo.arguments.contains("-resetScheduleForUITests") {
+            let descriptor = FetchDescriptor<WeeklySchedule>()
+            do {
+                for schedule in try modelContext.fetch(descriptor) {
+                    modelContext.delete(schedule)
+                }
+            } catch {
+                AppLogger.error("Failed to fetch schedules for UI test reset: \(error)", category: "Testing")
+            }
+        }
         do {
             try modelContext.save()
             AppLogger.debug("Reset timer state for UI tests", category: "Testing")
         } catch {
             AppLogger.error("Failed to reset timer state for UI tests: \(error)", category: "Testing")
+        }
+    }
+
+    @MainActor
+    private func seedBeginnerScheduleForUITestsIfNeeded() {
+        guard ProcessInfo.processInfo.arguments.contains("-seedBeginnerScheduleForUITests") else { return }
+        let plan = defaultPlan
+        let existingWeekdays = Set(schedulesForUITests().map(\.weekday))
+        for weekday in 1...7 where !existingWeekdays.contains(weekday) {
+            modelContext.insert(
+                WeeklySchedule(
+                    weekday: weekday,
+                    plan: plan,
+                    isFastingDay: true,
+                    isCheatDay: false,
+                    startTimeMinutesFromMidnight: 20 * 60,
+                    reminderEnabled: true,
+                    templateIdentifier: "beginner16_8",
+                    updatedAt: Date()
+                )
+            )
+        }
+        do {
+            try modelContext.save()
+            AppLogger.debug("Seeded beginner schedule for UI tests", category: "Testing")
+        } catch {
+            AppLogger.error("Failed to seed beginner schedule for UI tests: \(error)", category: "Testing")
+        }
+    }
+
+    @MainActor
+    private func seedCompletedFastForUITestsIfNeeded() {
+        guard ProcessInfo.processInfo.arguments.contains("-seedCompletedFastForUITests") else { return }
+        let calendar = Calendar.current
+        let now = Date()
+        let startOfToday = calendar.startOfDay(for: now)
+        let start = calendar.date(byAdding: .hour, value: 1, to: startOfToday) ?? now
+        let end = calendar.date(byAdding: .hour, value: 17, to: start) ?? now
+        let session = FastingSession(
+            plan: defaultPlan,
+            status: .completed,
+            startedAt: start,
+            endedAt: end,
+            targetFastingMinutes: 16 * 60,
+            source: .timer,
+            createdAt: now,
+            updatedAt: now
+        )
+        modelContext.insert(session)
+        do {
+            try modelContext.save()
+            AppLogger.debug("Seeded completed fast for UI tests", category: "Testing")
+        } catch {
+            AppLogger.error("Failed to seed completed fast for UI tests: \(error)", category: "Testing")
+        }
+    }
+
+    @MainActor
+    private func schedulesForUITests() -> [WeeklySchedule] {
+        do {
+            return try modelContext.fetch(FetchDescriptor<WeeklySchedule>())
+        } catch {
+            AppLogger.error("Failed to fetch schedules for UI test seed: \(error)", category: "Testing")
+            return []
         }
     }
 

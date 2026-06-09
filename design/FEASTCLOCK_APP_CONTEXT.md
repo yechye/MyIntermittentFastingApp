@@ -78,6 +78,7 @@ The approved logo direction is a simplified watch-face app icon with moon phase 
 - There is a small gap between the moon phase containing circle and the surrounding green ring.
 - The gray circle behind the moon phase was removed.
 - The moon phase must be clear at app icon size.
+- The logo mark is scaled close to the icon edges, occupying roughly a 900px visual bounding box inside the 1024px app icon canvas.
 - Avoid excessive small details because they do not survive iOS icon scaling.
 
 Current approved source asset:
@@ -90,28 +91,24 @@ Current preview asset:
 
 The final watch logo was integrated as the iOS app icon in:
 
-- `iOSApp/FastingApp/FastingApp/Assets.xcassets/AppIcon.appiconset/AppIcon.png`
-- `iOSApp/FastingApp/FastingApp/Assets.xcassets/AppIcon.appiconset/AppIcon-Dark.png`
-- `iOSApp/FastingApp/FastingApp/Assets.xcassets/AppIcon.appiconset/AppIcon-Tinted.png`
-- `iOSApp/FastingApp/FastingApp/Assets.xcassets/AppIcon.appiconset/Contents.json`
+- `FastingApp/Assets.xcassets/AppIcon.appiconset/AppIcon.png`
+- `FastingApp/Assets.xcassets/AppIcon.appiconset/AppIcon-Dark.png`
+- `FastingApp/Assets.xcassets/AppIcon.appiconset/AppIcon-Tinted.png`
+- `FastingApp/Assets.xcassets/AppIcon.appiconset/Contents.json`
 
-The reusable logo image asset is also present in both app trees:
+The reusable logo image asset is present in:
 
 - `FastingApp/Resources/Assets.xcassets/FeastClockWatchLogo.imageset/FeastClockWatchLogo.png`
 - `FastingApp/Resources/Images/FeastClockWatchLogo.png`
-- `iOSApp/FastingApp/FastingApp/Resources/Assets.xcassets/FeastClockWatchLogo.imageset/FeastClockWatchLogo.png`
-- `iOSApp/FastingApp/FastingApp/Resources/Images/FeastClockWatchLogo.png`
 
 Current splash screen assets use the approved watch-face logo, not the older FeastClock yin-yang/day-night logo. The splash lockup is centered on both axes, with the logo above the `FeastClock` wordmark on an off-white `#FAF9FE` background:
 
 - `FastingApp/Resources/Assets.xcassets/SplashScreen.imageset/SplashScreen.png`
 - `FastingApp/Resources/Images/SplashScreen.png`
-- `iOSApp/FastingApp/FastingApp/Resources/Assets.xcassets/SplashScreen.imageset/SplashScreen.png`
-- `iOSApp/FastingApp/FastingApp/Resources/Images/SplashScreen.png`
 
 The iOS app start flow is wired to show this splash in two places:
 
-- Native launch screen: `iOSApp/FastingApp/Config/Info.plist` defines `UILaunchScreen` with `UIImageName` set to `SplashScreen`.
+- Native launch screen: `Config/Info.plist` defines `UILaunchScreen` with `UIImageName` set to `SplashScreen`.
 - SwiftUI startup handoff: `SplashContainerView` briefly overlays `SplashScreenView` before fading into `ContentView`.
 
 Older FeastClock logo assets still exist and may be kept for reference or removed later if no longer needed:
@@ -119,14 +116,12 @@ Older FeastClock logo assets still exist and may be kept for reference or remove
 - `design/generated/feastclock-logo-clock.png`
 - `design/generated/feastclock-logo-light-preview.png`
 - `FastingApp/Resources/Assets.xcassets/FeastClockLogo.imageset/FeastClockLogo.png`
-- `iOSApp/FastingApp/FastingApp/Resources/Assets.xcassets/FeastClockLogo.imageset/FeastClockLogo.png`
 
 ## Current UI Implementation Notes
 
-The main timer screen is implemented in two mirrored app trees:
+The main timer screen is implemented in:
 
 - `FastingApp/Views/Timer/TimerScreen.swift`
-- `iOSApp/FastingApp/FastingApp/Views/Timer/TimerScreen.swift`
 
 Timer timeline behavior currently:
 
@@ -155,9 +150,8 @@ Core app structure includes:
 
 Logging/debugging implementation:
 
-- App logging is centralized in `AppLogger`, mirrored in both app trees:
+- App logging is centralized in `AppLogger`:
   - `FastingApp/Utilities/AppLogger.swift`
-  - `iOSApp/FastingApp/FastingApp/Utilities/AppLogger.swift`
 - Log levels are `debug`, `info`, `warning`, `error`, and `off`.
 - The minimum emitted log level is stored in `UserDefaults` / `@AppStorage` under `settings.minimumLogLevel`.
 - The default minimum log level is `info`.
@@ -186,7 +180,7 @@ Logging/debugging implementation:
 - Integrated the approved watch-face logo as the iOS app icon.
 - Refined the FeastClock top-bar logotype with Hanken Grotesk Semi-Bold, tightened letter spacing, and improved icon/text alignment.
 - Updated the timer timeline so start and target circles remain fixed, elapsed time stays centered, and current progress is indicated by its own moving circle.
-- Created splash screen assets in both app trees using the approved watch-face logo and centered FeastClock wordmark.
+- Created splash screen assets using the approved watch-face logo and centered FeastClock wordmark.
 - Integrated the splash screen into app startup with a native `UILaunchScreen` image and SwiftUI splash handoff.
 - Added centralized OSLog-backed app logging with controllable log levels and interaction/error coverage.
 - Added a Settings Debug section for choosing the minimum emitted log level.
@@ -200,7 +194,7 @@ Logging/debugging implementation:
 Most recent build verification:
 
 ```sh
-xcodebuild -project iOSApp/FastingApp/FastingApp.xcodeproj -scheme FastingApp -destination 'generic/platform=iOS Simulator' build
+xcodebuild -project FastingApp.xcodeproj -scheme FastingApp -destination 'generic/platform=iOS Simulator' build
 ```
 
 Result: succeeded after integrating the corrected watch-logo splash screen into app startup.
@@ -208,20 +202,23 @@ Result: succeeded after integrating the corrected watch-logo splash screen into 
 Most recent logging verification:
 
 ```sh
-xcodebuild build -project iOSApp/FastingApp/FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17'
+xcodebuild build -project FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
 Result: succeeded after adding centralized logging and the Settings log-level picker.
 
 ```sh
-xcodebuild test -project iOSApp/FastingApp/FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:FastingAppUITests/FastingAppUITests/testEndingFastEarlyAsCompletedReturnsToStartState -only-testing:FastingAppUITests/FastingAppUITests/testEndingFastEarlyAsSkippedReturnsToStartState
+xcodebuild test -project FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:FastingAppUITests/FastingAppUITests/testEndingFastEarlyAsCompletedReturnsToStartState -only-testing:FastingAppUITests/FastingAppUITests/testEndingFastEarlyAsSkippedReturnsToStartState
 ```
 
 Result: succeeded, 2 UI tests passed.
 
-Additional verification note:
+Current structure note:
 
-- `swift build` for the root Swift package currently fails on an unrelated macOS availability issue in `FastingApp/Views/Settings/SettingsScreen.swift`: `navigationBarTitleDisplayMode` is unavailable in macOS.
+- The app is now a root-level iOS Xcode project: `FastingApp.xcodeproj`.
+- The canonical source tree is `FastingApp/`.
+- Unit tests live in `FastingAppTests/`; UI tests live in `FastingAppUITests/`.
+- The previous nested `iOSApp/FastingApp/FastingApp` and root Swift Package structure were consolidated on 2026-06-09.
 
 ## Periodic Update Checklist
 
@@ -242,5 +239,3 @@ Recommended cadence: update after each meaningful design or implementation sessi
 - Formal trademark clearance for FeastClock is still needed before public launch.
 - App Store metadata, screenshots, privacy nutrition labels, and review notes are not documented here yet.
 - The old Lume/Vitality naming appears in some design documents and code identifiers. Decide later whether to rename those internal references or keep them as historical/internal implementation names.
-- If both the Swift Package app tree and Xcode iOS app tree remain active, keep mirrored resource and SwiftUI changes synchronized.
-- The root Swift package includes macOS as a platform, but at least one SwiftUI settings modifier is currently iOS-only. Decide whether the package should remain macOS-buildable or gate iOS-specific modifiers with platform checks.
