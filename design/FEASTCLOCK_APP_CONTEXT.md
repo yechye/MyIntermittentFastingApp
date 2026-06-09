@@ -78,6 +78,7 @@ The approved logo direction is a simplified watch-face app icon with moon phase 
 - There is a small gap between the moon phase containing circle and the surrounding green ring.
 - The gray circle behind the moon phase was removed.
 - The moon phase must be clear at app icon size.
+- The logo mark is scaled close to the icon edges, occupying roughly a 900px visual bounding box inside the 1024px app icon canvas.
 - Avoid excessive small details because they do not survive iOS icon scaling.
 
 Current approved source asset:
