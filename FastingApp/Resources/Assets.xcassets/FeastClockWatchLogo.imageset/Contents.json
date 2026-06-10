@@ -4,6 +4,17 @@
       "filename" : "FeastClockWatchLogo.png",
       "idiom" : "universal",
       "scale" : "1x"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "FeastClockWatchLogoDark.png",
+      "idiom" : "universal",
+      "scale" : "1x"
     }
   ],
   "info" : {

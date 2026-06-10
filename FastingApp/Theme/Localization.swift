@@ -79,11 +79,10 @@ enum AppStrings {
     static let scheduleChoosePlanStart = localized("schedule_choose_plan_start")
     static let scheduleCompletedFast = localized("schedule_completed_fast_label")
     static let scheduleFastOnTarget = localized("schedule_fast_on_target_label")
+    static let historyTitle = localized("history_title")
 
     static func localized(_ key: String) -> String {
-        let resourceBundle: Bundle? = .main
-
-        return String(localized: String.LocalizationValue(key), bundle: resourceBundle)
+        NSLocalizedString(key, tableName: nil, bundle: .main, value: key, comment: "")
     }
 
     static func startFast(_ planName: String) -> String {

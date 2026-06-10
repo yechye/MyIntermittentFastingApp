@@ -1,6 +1,6 @@
 # FeastClock App Context
 
-Last updated: 2026-05-30
+Last updated: 2026-06-09
 
 This is the living knowledge base for FeastClock. Update it whenever product requirements, naming, styling, branding, core flows, assets, or implementation details change. Treat it as the handoff file for future design and engineering work.
 
@@ -20,6 +20,7 @@ The app was previously described under names like Lume and Vitality during desig
 - Active fast behavior: show current progress, elapsed fasting time, target fasting duration, and end/discard actions.
 - Inactive behavior: show a ready-to-fast state and a start action.
 - Supporting data: streak count, latest Apple Health weight reading, water/hydration context, schedule/settings, and fasting history.
+- Fasting history: Insights shows saved completed/skipped fasts with selectable ranges, fasting/eating totals, charts, all-history grouping, CSV export, and educational fasting phases for individual fasts.
 - HealthKit is part of the app surface for weight readings and health-related integration.
 - The app should preserve a native iOS feel: clear hierarchy, safe area awareness, compact controls, and polished typography.
 
@@ -146,6 +147,7 @@ Core app structure includes:
 - Services: fasting session, fasting plan, weekly schedule, user settings, notifications, cheat days, and HealthKit.
 - Use cases: statistics calculation and streak calculation.
 - Views: timer, settings, and content/root views.
+- History/Insights: selectable 7-day, 30-day, 180-day, and 1-year history view with Swift Charts, all-time grouped fast list, CSV sharing, and Healthline-inspired fasting phase detail.
 - Tests: fasting sessions, fasting plans, weekly schedule, notifications, streaks, settings, cheat days, and HealthKit service behavior.
 
 Logging/debugging implementation:
@@ -188,6 +190,11 @@ Logging/debugging implementation:
 - Verified the iOS project builds successfully after the timer timeline update.
 - Verified the iOS project builds successfully after adding the corrected watch-logo splash screen assets.
 - Verified the iOS project builds and the early-fast-ending UI tests pass after the logging update.
+- Added the fasting history page in Insights with range charts, fasting/eating totals, saved fast lists, grouped all-history view, CSV export, and individual fast phase detail.
+- Verified targeted history calculator/export unit tests and the iOS project build after the history implementation.
+- Added missed-fast entry from History with start/end validation, notes, conflict preview, and overlap protection against saved or active fasts.
+- Verified targeted fasting session lifecycle tests after adding missed-fast entry.
+- Added targeted UI coverage for adding a missed fast from History and deleting a saved history fast.
 
 ## Verification Status
 
@@ -198,6 +205,26 @@ xcodebuild -project FastingApp.xcodeproj -scheme FastingApp -destination 'generi
 ```
 
 Result: succeeded after integrating the corrected watch-logo splash screen into app startup.
+
+Most recent missed-fast verification:
+
+```sh
+xcodebuild test -project FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:FastingAppTests/FastingSessionTests
+```
+
+Result: succeeded, 23 targeted fasting session tests passed.
+
+```sh
+xcodebuild test -project FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:FastingAppUITests/FastingAppUITests/testHistoryCanAddMissedFast -only-testing:FastingAppUITests/FastingAppUITests/testHistoryCanDeleteFast
+```
+
+Result: succeeded, 2 targeted History UI tests passed.
+
+```sh
+xcodebuild -project FastingApp.xcodeproj -scheme FastingApp -destination 'generic/platform=iOS Simulator' build
+```
+
+Result: succeeded after adding missed-fast entry, overlap handling, and targeted History UI coverage.
 
 Most recent logging verification:
 
@@ -212,6 +239,20 @@ xcodebuild test -project FastingApp.xcodeproj -scheme FastingApp -destination 'p
 ```
 
 Result: succeeded, 2 UI tests passed.
+
+Most recent history verification:
+
+```sh
+xcodebuild test -project FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:FastingAppTests/FastingHistoryCalculatorTests -only-testing:FastingAppTests/FastingHistoryExporterTests
+```
+
+Result: succeeded, 6 targeted unit tests passed.
+
+```sh
+xcodebuild -project FastingApp.xcodeproj -scheme FastingApp -destination 'generic/platform=iOS Simulator' build
+```
+
+Result: succeeded after adding the fasting history page.
 
 Current structure note:
 

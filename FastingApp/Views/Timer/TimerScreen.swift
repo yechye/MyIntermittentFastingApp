@@ -3,11 +3,14 @@ import SwiftData
 import UIKit
 
 struct TimerScreen: View {
+    @State private var editingStartSession: FastingSession?
+
     let activeSession: FastingSession?
     let defaultPlan: FastingPlan?
     let streak: Int
     let latestWeight: WeightSample?
     let weightLoadFailed: Bool
+    let isStartingFast: Bool
     let startFast: () -> Void
     let requestEnd: (FastingSession) -> Void
     let requestDiscard: (FastingSession) -> Void
@@ -15,38 +18,50 @@ struct TimerScreen: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { timeline in
             let metrics = metrics(at: timeline.date)
-            ScrollView {
-                VStack(spacing: 0) {
-                    LumeTopBar()
+            GeometryReader { proxy in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        LumeTopBar()
 
-                    VStack(spacing: 16) {
-                        TimerStatusHeader(planName: planName, isActive: activeSession != nil)
+                        VStack(spacing: 10) {
+                            TimerStatusHeader(planName: planName, isActive: activeSession != nil)
 
-                        FastingTimeline(metrics: metrics)
+                            FastingTimeline(metrics: metrics)
+                                .frame(height: timelineHeight(for: proxy.size.height))
+                                .frame(maxWidth: .infinity)
 
-                        TimerActions(
-                            activeSession: activeSession,
-                            planName: planName,
-                            startFast: startFast,
-                            requestEnd: requestEnd,
-                            requestDiscard: requestDiscard
-                        )
+                            VStack(spacing: 12) {
+                                TimerActions(
+                                    activeSession: activeSession,
+                                    isStartingFast: isStartingFast,
+                                    planName: planName,
+                                    startFast: startFast,
+                                    requestEnd: requestEnd,
+                                    requestDiscard: requestDiscard,
+                                    requestEditStart: { editingStartSession = $0 }
+                                )
 
-                        TimerSummaryCards(
-                            streak: streak,
-                            weightText: weightText,
-                            hasWeightReading: latestWeight != nil
-                        )
+                                TimerSummaryCards(
+                                    streak: streak,
+                                    weightText: weightText,
+                                    hasWeightReading: latestWeight != nil
+                                )
+                            }
+                        }
+                        .frame(maxWidth: 448)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+                        .padding(.bottom, 14)
                     }
-                    .frame(maxWidth: 448)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 18)
-                    .padding(.bottom, 24)
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: proxy.size.height, alignment: .top)
                 }
-                .frame(maxWidth: .infinity)
+                .scrollIndicators(.hidden)
             }
-            .scrollIndicators(.hidden)
             .background(Color.timerBackground)
+        }
+        .sheet(item: $editingStartSession) { session in
+            EditFastStartSheet(session: session)
         }
     }
 
@@ -67,10 +82,14 @@ struct TimerScreen: View {
         }
         return "\(latestWeight.value.formatted(.number.precision(.fractionLength(1)))) \(latestWeight.unit.rawValue)"
     }
+
+    private func timelineHeight(for screenHeight: CGFloat) -> CGFloat {
+        min(max(screenHeight - 372, 276), 430)
+    }
 }
 
 enum TimerTestingClock {
-    static let speedMultiplier: TimeInterval = 20
+    static let speedMultiplier: TimeInterval = 1
 
     static func now(for session: FastingSession, realNow: Date = Date()) -> Date {
         let elapsed = max(0, realNow.timeIntervalSince(session.startedAt))
@@ -97,8 +116,8 @@ private struct LumeTopBar: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-        .background(Color.lumeHeaderSurface)
+        .padding(.vertical, 8)
+        .background(Color.timerBackground)
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(Color.lumeStroke.opacity(0.72))
@@ -108,6 +127,8 @@ private struct LumeTopBar: View {
 }
 
 private struct FastingLogoImage: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var size: CGFloat = 58
     var cornerRadius: CGFloat = 16
     var showsContainer = true
@@ -135,8 +156,13 @@ private struct FastingLogoImage: View {
 
     private var loadedImage: Image {
         let resourceBundle = Bundle.main
+        let preferredLogoName = colorScheme == .dark ? "FeastClockWatchLogoDark" : "FeastClockWatchLogo"
 
-        guard let url = resourceBundle.url(forResource: "FeastClockWatchLogo", withExtension: "png") ?? resourceBundle.url(
+        guard let url = resourceBundle.url(forResource: preferredLogoName, withExtension: "png") ?? resourceBundle.url(
+            forResource: preferredLogoName,
+            withExtension: "png",
+            subdirectory: "Images"
+        ) ?? resourceBundle.url(forResource: "FeastClockWatchLogo", withExtension: "png") ?? resourceBundle.url(
             forResource: "FeastClockWatchLogo",
             withExtension: "png",
             subdirectory: "Images"
@@ -175,7 +201,7 @@ private struct TimerStatusHeader: View {
                 .lineLimit(2)
                 .minimumScaleFactor(0.78)
         }
-        .padding(.top, 8)
+        .padding(.top, 4)
     }
 }
 
@@ -205,14 +231,16 @@ private struct StatusChip: View {
 private struct FastingTimeline: View {
     let metrics: TimerMetrics
 
-    private let timelineHeight: CGFloat = 330
     private let centerWidth: CGFloat = 38
-    private let trackTopY: CGFloat = 62
-    private let trackBottomY: CGFloat = 280
 
     var body: some View {
         GeometryReader { proxy in
             let centerX = proxy.size.width / 2
+            let timelineHeight = proxy.size.height
+            let trackTopY = max(42, timelineHeight * 0.14)
+            let trackBottomY = min(timelineHeight - 34, timelineHeight * 0.86)
+            let trackCenterY = (trackTopY + trackBottomY) / 2
+            let progressY = trackTopY + CGFloat(metrics.progress) * (trackBottomY - trackTopY)
 
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 1)
@@ -257,18 +285,9 @@ private struct FastingTimeline: View {
                     .position(x: centerX, y: trackBottomY)
 
                 TimelineDot(color: .lumeSage, size: 28, innerSize: 10)
-                    .position(x: centerX, y: currentProgressY)
+                    .position(x: centerX, y: progressY)
             }
         }
-        .frame(height: timelineHeight)
-    }
-
-    private var trackCenterY: CGFloat {
-        (trackTopY + trackBottomY) / 2
-    }
-
-    private var currentProgressY: CGFloat {
-        trackTopY + CGFloat(metrics.progress) * (trackBottomY - trackTopY)
     }
 }
 
@@ -356,9 +375,9 @@ private struct ElapsedTimeCard: View {
                 .minimumScaleFactor(0.58)
                 .accessibilityIdentifier("timer.elapsedText")
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 18)
-        .frame(minWidth: 170, minHeight: 116, alignment: .trailing)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .frame(minWidth: 164, minHeight: 96, alignment: .trailing)
         .lumeGlassCard(cornerRadius: 18)
     }
 
@@ -402,7 +421,7 @@ private struct TimerSummaryCards: View {
     let hasWeightReading: Bool
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 12) {
             TimerMiniCard(
                 icon: "flame",
                 value: "\(streak)",
@@ -428,7 +447,7 @@ private struct TimerMiniCard: View {
     var isCompactValue = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 9) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.callout.weight(.semibold))
@@ -454,21 +473,23 @@ private struct TimerMiniCard: View {
                 }
             }
         }
-        .padding(18)
-        .frame(maxWidth: .infinity, minHeight: 118, alignment: .leading)
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
         .lumeGlassCard(cornerRadius: 18)
     }
 }
 
 private struct TimerActions: View {
     let activeSession: FastingSession?
+    let isStartingFast: Bool
     let planName: String
     let startFast: () -> Void
     let requestEnd: (FastingSession) -> Void
     let requestDiscard: (FastingSession) -> Void
+    let requestEditStart: (FastingSession) -> Void
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             if let activeSession {
                 HStack(spacing: 10) {
                     TimerPrimaryActionButton(title: AppStrings.endFast, accessibilityIdentifier: "timer.endFastButton") {
@@ -476,7 +497,9 @@ private struct TimerActions: View {
                     }
                     .layoutPriority(1)
 
-                    TimerEditStartButton {}
+                    TimerEditStartButton {
+                        requestEditStart(activeSession)
+                    }
                     TimerIconActionButton(
                         systemName: "trash",
                         foreground: Color.timerDestructive,
@@ -491,23 +514,23 @@ private struct TimerActions: View {
             } else {
                 HStack(spacing: 10) {
                     TimerPrimaryActionButton(
-                        title: AppStrings.startFast(planName),
+                        title: isStartingFast ? AppStrings.localized("starting_fast_button") : AppStrings.startFast(planName),
                         accessibilityIdentifier: "timer.startFastButton",
+                        isDisabled: isStartingFast,
                         action: startFast
                     )
                         .layoutPriority(1)
 
-                    TimerEditStartButton {}
                 }
             }
         }
-        .padding(.top, 4)
     }
 }
 
 private struct TimerPrimaryActionButton: View {
     let title: String
     let accessibilityIdentifier: String
+    var isDisabled = false
     let action: () -> Void
 
     var body: some View {
@@ -522,8 +545,9 @@ private struct TimerPrimaryActionButton: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(.white)
-        .background(Color.lumeSage, in: RoundedRectangle(cornerRadius: 18))
+        .background(isDisabled ? Color.lumeSage.opacity(0.64) : Color.lumeSage, in: RoundedRectangle(cornerRadius: 18))
         .shadow(color: Color.lumePrimary.opacity(0.16), radius: 14, x: 0, y: 8)
+        .disabled(isDisabled)
         .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
@@ -566,6 +590,75 @@ private struct TimerIconActionButton: View {
                 .stroke(stroke, lineWidth: 0.75)
         }
         .accessibilityLabel(accessibilityLabel)
+    }
+}
+
+private struct EditFastStartSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    let session: FastingSession
+
+    @State private var selectedStart: Date
+    @State private var errorMessage: String?
+
+    init(session: FastingSession) {
+        self.session = session
+        _selectedStart = State(initialValue: session.startedAt)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    DatePicker(
+                        AppStrings.editStartTime,
+                        selection: $selectedStart,
+                        in: ...Date(),
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    .datePickerStyle(.graphical)
+                } footer: {
+                    Text(AppStrings.localized("edit_start_time_help"))
+                }
+
+                if let errorMessage {
+                    Section {
+                        Text(errorMessage)
+                            .foregroundStyle(Color.timerDestructive)
+                    }
+                }
+            }
+            .navigationTitle(AppStrings.editStartTime)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(AppStrings.cancel) {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(AppStrings.save) {
+                        save()
+                    }
+                    .disabled(selectedStart >= Date())
+                }
+            }
+        }
+    }
+
+    private func save() {
+        do {
+            try FastingSessionService(
+                context: modelContext,
+                notificationService: NotificationService()
+            )
+            .editSession(session, startedAt: selectedStart, endedAt: nil, notes: session.notes)
+            AppLogger.info("Edited active fast start time for session \(session.id)", category: "Timer")
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+            AppLogger.error("Failed to edit active fast start time for session \(session.id): \(error)", category: "Timer")
+        }
     }
 }
 

@@ -7,10 +7,22 @@ struct ContentView: View {
     @Query(sort: \FastingSession.startedAt, order: .reverse) private var sessions: [FastingSession]
     @Query(sort: \CheatDay.date, order: .reverse) private var cheatDays: [CheatDay]
     @AppStorage("selectedTheme") private var selectedThemeRaw = AppTheme.system.rawValue
-    @State private var selectedTab = ProcessInfo.processInfo.arguments.contains("-openScheduleForUITests") ? AppTab.schedule : AppTab.timer
+    @State private var selectedTab = ContentView.initialTab
     @State private var latestWeight: WeightSample?
     @State private var weightLoadFailed = false
     @State private var confirmation: TimerConfirmation?
+    @State private var isStartingFast = false
+
+    private static var initialTab: AppTab {
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-openScheduleForUITests") {
+            return .schedule
+        }
+        if arguments.contains("-openHistoryForUITests") {
+            return .insights
+        }
+        return .timer
+    }
 
     private var activeSession: FastingSession? {
         return sessions.first { $0.status == .active && $0.deletedAt == nil }
@@ -29,6 +41,7 @@ struct ContentView: View {
                     streak: currentStreak,
                     latestWeight: latestWeight,
                     weightLoadFailed: weightLoadFailed,
+                    isStartingFast: isStartingFast,
                     startFast: startFast,
                     requestEnd: requestEndFast,
                     requestDiscard: requestDiscardFast
@@ -48,8 +61,7 @@ struct ContentView: View {
             .tag(AppTab.schedule)
 
             NavigationStack {
-                PlaceholderTab(title: AppStrings.insights, systemImage: "chart.bar")
-                    .navigationTitle(AppStrings.insights)
+                HistoryScreen()
             }
             .tabItem {
                 Label(AppStrings.insights, systemImage: "chart.bar")
@@ -160,12 +172,18 @@ struct ContentView: View {
 
     @MainActor
     private func startFast() {
+        guard !isStartingFast else { return }
         AppLogger.info("Tapped start fast button", category: "Interaction")
-        do {
-            let session = try makeSessionService().startFast(plan: defaultPlan, source: .timer, date: Date())
-            AppLogger.info("Started fast session \(session.id) with plan \(session.planName ?? "none")", category: "Timer")
-        } catch {
-            AppLogger.error("Failed to start fast: \(error)", category: "Timer")
+        isStartingFast = true
+        Task { @MainActor in
+            await Task.yield()
+            do {
+                let session = try makeSessionService().startFast(plan: defaultPlan, source: .timer, date: Date())
+                AppLogger.info("Started fast session \(session.id) with plan \(session.planName ?? "none")", category: "Timer")
+            } catch {
+                AppLogger.error("Failed to start fast: \(error)", category: "Timer")
+            }
+            isStartingFast = false
         }
     }
 
@@ -303,23 +321,6 @@ private enum AppTab: String {
     case schedule
     case insights
     case settings
-}
-
-private struct PlaceholderTab: View {
-    let title: String
-    let systemImage: String
-
-    var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: systemImage)
-                .font(.largeTitle)
-                .foregroundStyle(Color.timerPurple)
-            Text(title)
-                .heading2()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.timerBackground)
-    }
 }
 
 #Preview {
