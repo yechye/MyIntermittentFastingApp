@@ -82,9 +82,7 @@ enum AppStrings {
     static let historyTitle = localized("history_title")
 
     static func localized(_ key: String) -> String {
-        let resourceBundle: Bundle? = .main
-
-        return String(localized: String.LocalizationValue(key), bundle: resourceBundle)
+        NSLocalizedString(key, tableName: nil, bundle: .main, value: key, comment: "")
     }
 
     static func startFast(_ planName: String) -> String {

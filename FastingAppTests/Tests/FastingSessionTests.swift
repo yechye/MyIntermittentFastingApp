@@ -25,6 +25,100 @@ final class FastingSessionTests: XCTestCase {
         XCTAssertEqual(sessions.first?.id, session.id)
     }
 
+    func test_addHistoricalFastCreatesCompletedSession() throws {
+        let start = Date()
+        let end = start.addingTimeInterval(16 * 60 * 60)
+        let (container, service, _) = try makeService()
+
+        let session = try service.addHistoricalFast(plan: nil, startedAt: start, endedAt: end, notes: "missed")
+
+        let savedSession = try XCTUnwrap(fetchAll(FastingSession.self, in: container.mainContext).first)
+        XCTAssertEqual(savedSession.id, session.id)
+        XCTAssertEqual(savedSession.status, .completed)
+        XCTAssertEqual(savedSession.source, .manual)
+        XCTAssertEqual(savedSession.notes, "missed")
+    }
+
+    func test_addHistoricalFastAppearsInHistorySessions() throws {
+        let start = Date()
+        let end = start.addingTimeInterval(16 * 60 * 60)
+        let (container, service, _) = try makeService()
+        let session = try service.addHistoricalFast(plan: nil, startedAt: start, endedAt: end, notes: "missed")
+        let sessions = try fetchAll(FastingSession.self, in: container.mainContext)
+
+        let historySessions = FastingHistoryCalculator().historySessions(from: sessions)
+
+        XCTAssertEqual(historySessions.map(\.id), [session.id])
+    }
+
+    func test_addHistoricalFastRejectsOverlappingSession() throws {
+        let start = Date()
+        let end = start.addingTimeInterval(16 * 60 * 60)
+        let (container, service, _) = try makeService()
+        _ = try service.addHistoricalFast(plan: nil, startedAt: start, endedAt: end, notes: nil)
+
+        XCTAssertThrowsError(
+            try service.addHistoricalFast(
+                plan: nil,
+                startedAt: start.addingTimeInterval(60 * 60),
+                endedAt: end.addingTimeInterval(60 * 60),
+                notes: nil
+            )
+        ) { error in
+            XCTAssertEqual(error as? FastingError, .overlappingSession)
+        }
+        XCTAssertEqual(try fetchAll(FastingSession.self, in: container.mainContext).count, 1)
+    }
+
+    func test_addHistoricalFastAllowsOverlapWithDeletedSession() throws {
+        let now = Date()
+        let start = now.addingTimeInterval(-20 * 60 * 60)
+        let end = now.addingTimeInterval(-4 * 60 * 60)
+        let (container, service, _) = try makeService(now: now)
+        let deletedSession = try service.addHistoricalFast(plan: nil, startedAt: start, endedAt: end, notes: nil)
+        try service.softDelete(session: deletedSession)
+
+        let replacementSession = try service.addHistoricalFast(
+            plan: nil,
+            startedAt: start.addingTimeInterval(60 * 60),
+            endedAt: end.addingTimeInterval(-60 * 60),
+            notes: "replacement"
+        )
+
+        let sessions = try fetchAll(FastingSession.self, in: container.mainContext)
+        XCTAssertEqual(sessions.count, 2)
+        XCTAssertEqual(replacementSession.notes, "replacement")
+        XCTAssertEqual(FastingHistoryCalculator().historySessions(from: sessions).map(\.id), [replacementSession.id])
+    }
+
+    func test_addHistoricalFastRejectsOverlapWithActiveSession() throws {
+        let start = Date()
+        let (container, service, _) = try makeService(now: start.addingTimeInterval(2 * 60 * 60))
+        _ = container
+        _ = try service.startFast(plan: nil, source: .manual, date: start)
+
+        XCTAssertThrowsError(
+            try service.addHistoricalFast(
+                plan: nil,
+                startedAt: start.addingTimeInterval(30 * 60),
+                endedAt: start.addingTimeInterval(90 * 60),
+                notes: nil
+            )
+        ) { error in
+            XCTAssertEqual(error as? FastingError, .overlappingSession)
+        }
+    }
+
+    func test_addHistoricalFastRejectsInvalidDateRange() throws {
+        let start = Date()
+        let (container, service, _) = try makeService()
+        _ = container
+
+        XCTAssertThrowsError(try service.addHistoricalFast(plan: nil, startedAt: start, endedAt: start, notes: nil)) { error in
+            XCTAssertEqual(error as? FastingError, .invalidDateRange)
+        }
+    }
+
     func test_startFastThrowsIfAlreadyActive() throws {
         let (container, service, notifications) = try makeService()
         _ = try service.startFast(plan: nil, source: .manual, date: .now)
@@ -167,6 +261,20 @@ final class FastingSessionTests: XCTestCase {
         try service.softDelete(session: session)
 
         XCTAssertEqual(session.deletedAt, now)
+    }
+
+    func test_softDeleteRemovesHistoricalFastFromHistorySessions() throws {
+        let now = Date()
+        let start = now.addingTimeInterval(-18 * 60 * 60)
+        let end = now.addingTimeInterval(-2 * 60 * 60)
+        let (container, service, _) = try makeService(now: now)
+        let session = try service.addHistoricalFast(plan: nil, startedAt: start, endedAt: end, notes: nil)
+
+        try service.softDelete(session: session)
+
+        let sessions = try fetchAll(FastingSession.self, in: container.mainContext)
+        XCTAssertEqual(session.deletedAt, now)
+        XCTAssertTrue(FastingHistoryCalculator().historySessions(from: sessions).isEmpty)
     }
 
     func test_editSessionRecalculatesStatus() throws {

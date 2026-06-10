@@ -8,6 +8,7 @@ enum FastingError: LocalizedError, Equatable {
     case duplicateCheatDay
     case settingsMissing
     case invalidSessionStatus
+    case overlappingSession
 
     var errorDescription: String? {
         switch self {
@@ -25,6 +26,8 @@ enum FastingError: LocalizedError, Equatable {
             "User settings could not be created."
         case .invalidSessionStatus:
             "The fasting session status is not valid for this action."
+        case .overlappingSession:
+            "This fast overlaps another fast in your history."
         }
     }
 }

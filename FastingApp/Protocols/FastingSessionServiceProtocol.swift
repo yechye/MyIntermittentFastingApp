@@ -3,6 +3,7 @@ import Foundation
 @MainActor
 protocol FastingSessionServiceProtocol {
     func startFast(plan: FastingPlan?, source: FastingSource, date: Date) throws -> FastingSession
+    func addHistoricalFast(plan: FastingPlan?, startedAt: Date, endedAt: Date, notes: String?) throws -> FastingSession
     func endFast(session: FastingSession, at endDate: Date) throws
     func endFast(session: FastingSession, at endDate: Date, status: FastingStatus) throws
     func discardFast(session: FastingSession) throws

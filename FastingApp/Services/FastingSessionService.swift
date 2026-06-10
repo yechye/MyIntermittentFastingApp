@@ -34,6 +34,31 @@ final class FastingSessionService: FastingSessionServiceProtocol {
         return session
     }
 
+    @discardableResult
+    func addHistoricalFast(plan: FastingPlan?, startedAt: Date, endedAt: Date, notes: String?) throws -> FastingSession {
+        guard startedAt < endedAt else { throw FastingError.invalidDateRange }
+        guard try !overlapsExistingSession(startedAt: startedAt, endedAt: endedAt) else {
+            throw FastingError.overlappingSession
+        }
+
+        let target = plan?.fastingMinutes ?? 960
+        let duration = Int(endedAt.timeIntervalSince(startedAt) / 60)
+        let session = FastingSession(
+            plan: plan,
+            status: duration >= target ? .completed : .skipped,
+            startedAt: startedAt,
+            endedAt: endedAt,
+            targetFastingMinutes: target,
+            source: .manual,
+            notes: notes,
+            createdAt: dateProvider.now,
+            updatedAt: dateProvider.now
+        )
+        context.insert(session)
+        try context.save()
+        return session
+    }
+
     func endFast(session: FastingSession, at endDate: Date) throws {
         guard session.startedAt < endDate else { throw FastingError.invalidDateRange }
         let duration = Int(endDate.timeIntervalSince(session.startedAt) / 60)
@@ -96,5 +121,14 @@ final class FastingSessionService: FastingSessionServiceProtocol {
         let sessions = try context.fetch(FetchDescriptor<FastingSession>())
         return sessions
             .filter { $0.status == .active && $0.deletedAt == nil }
+    }
+
+    private func overlapsExistingSession(startedAt: Date, endedAt: Date) throws -> Bool {
+        let sessions = try context.fetch(FetchDescriptor<FastingSession>())
+        return sessions.contains { session in
+            guard session.deletedAt == nil, session.status != .discarded else { return false }
+            let existingEnd = session.endedAt ?? dateProvider.now
+            return session.startedAt < endedAt && existingEnd > startedAt
+        }
     }
 }

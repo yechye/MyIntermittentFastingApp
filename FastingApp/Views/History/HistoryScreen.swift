@@ -8,6 +8,7 @@ struct HistoryScreen: View {
     @State private var selectedRange: FastingHistoryRange = .thirtyDays
     @State private var selectedSession: FastingSession?
     @State private var deletingSession: FastingSession?
+    @State private var isAddingMissedFast = false
 
     private let calculator = FastingHistoryCalculator()
 
@@ -51,6 +52,14 @@ struct HistoryScreen: View {
         .navigationTitle(AppStrings.localized("history_title"))
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
+                Button {
+                    isAddingMissedFast = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel(AppStrings.localized("history_add_fast_title"))
+                .accessibilityIdentifier("history.addMissedFastButton")
+
                 NavigationLink {
                     AllFastsScreen(groups: calculator.sessionsGroupedByYear(sessions))
                 } label: {
@@ -66,6 +75,9 @@ struct HistoryScreen: View {
         }
         .sheet(item: $selectedSession) { session in
             FastDetailScreen(session: session, phases: calculator.phases(for: session))
+        }
+        .sheet(isPresented: $isAddingMissedFast) {
+            AddMissedFastSheet(sessions: sessions)
         }
         .confirmationDialog(
             AppStrings.localized("history_delete_fast_title"),
@@ -169,6 +181,7 @@ struct HistoryScreen: View {
                             } label: {
                                 FastRow(session: session)
                             }
+                            .accessibilityIdentifier("history.fastRow.\(session.id.uuidString)")
                             .buttonStyle(.plain)
 
                             Button(role: .destructive) {
@@ -183,6 +196,7 @@ struct HistoryScreen: View {
                             .buttonStyle(.plain)
                             .padding(.trailing, 12)
                             .accessibilityLabel(AppStrings.localized("history_delete_fast_button"))
+                            .accessibilityIdentifier("history.deleteFastButton.\(session.id.uuidString)")
                         }
 
                         if session.id != rangeSessions.last?.id {
@@ -223,6 +237,157 @@ struct HistoryScreen: View {
             AppLogger.error("Failed to delete history fast \(session.id): \(error)", category: "History")
         }
         deletingSession = nil
+    }
+}
+
+private struct AddMissedFastSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    let sessions: [FastingSession]
+
+    @State private var startedAt: Date
+    @State private var endedAt: Date
+    @State private var notes = ""
+    @State private var errorMessage: String?
+
+    init(sessions: [FastingSession]) {
+        self.sessions = sessions
+        let now = Date()
+        let end = Calendar.current.date(byAdding: .hour, value: -1, to: now) ?? now
+        let start = Calendar.current.date(byAdding: .hour, value: -16, to: end) ?? end
+        _startedAt = State(initialValue: start)
+        _endedAt = State(initialValue: end)
+    }
+
+    private var validationMessage: String? {
+        if startedAt >= endedAt {
+            return AppStrings.localized("history_add_fast_invalid_range")
+        }
+        if endedAt > Date() {
+            return AppStrings.localized("history_add_fast_future_end")
+        }
+        if overlappingSession != nil {
+            return AppStrings.localized("history_add_fast_overlap")
+        }
+        return nil
+    }
+
+    private var overlappingSession: FastingSession? {
+        sessions.first { session in
+            guard session.deletedAt == nil, session.status != .discarded else { return false }
+            let existingEnd = session.endedAt ?? Date()
+            return session.startedAt < endedAt && existingEnd > startedAt
+        }
+    }
+
+    private var canSave: Bool {
+        validationMessage == nil
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    DatePicker(
+                        AppStrings.localized("history_add_fast_start_label"),
+                        selection: $startedAt,
+                        in: ...Date(),
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    DatePicker(
+                        AppStrings.localized("history_add_fast_end_label"),
+                        selection: $endedAt,
+                        in: ...Date(),
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                } footer: {
+                    Text(AppStrings.localized("history_add_fast_help"))
+                }
+
+                Section(AppStrings.localized("history_add_fast_preview_title")) {
+                    HStack {
+                        Text(AppStrings.localized("history_add_fast_duration_label"))
+                        Spacer()
+                        Text(durationText)
+                            .foregroundStyle(Color.lumePrimary)
+                            .monospacedDigit()
+                    }
+                    if let overlappingSession {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(AppStrings.localized("history_add_fast_conflict_label"))
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Color.timerDestructive)
+                            FastRow(session: overlappingSession)
+                                .padding(.vertical, 4)
+                        }
+                    }
+                }
+
+                Section(AppStrings.localized("history_add_fast_notes_label")) {
+                    TextField(AppStrings.localized("history_add_fast_notes_placeholder"), text: $notes, axis: .vertical)
+                        .lineLimit(2...4)
+                }
+
+                if let message = validationMessage ?? errorMessage {
+                    Section {
+                        Text(message)
+                            .foregroundStyle(Color.timerDestructive)
+                    }
+                }
+            }
+            .navigationTitle(AppStrings.localized("history_add_fast_title"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(AppStrings.cancel) {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(AppStrings.save) {
+                        save()
+                    }
+                    .accessibilityIdentifier("history.saveMissedFastButton")
+                    .disabled(!canSave)
+                }
+            }
+        }
+    }
+
+    private var durationText: String {
+        let minutes = max(0, Int(endedAt.timeIntervalSince(startedAt) / 60))
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        if hours == 0 {
+            return AppStrings.scheduleDurationMinutes(remainder)
+        }
+        if remainder == 0 {
+            return AppStrings.scheduleDurationHours(hours)
+        }
+        return AppStrings.scheduleDurationHoursMinutes(hours: hours, minutes: remainder)
+    }
+
+    private func save() {
+        errorMessage = nil
+        do {
+            let session = try FastingSessionService(
+                context: modelContext,
+                notificationService: NotificationService()
+            )
+            .addHistoricalFast(
+                plan: nil,
+                startedAt: startedAt,
+                endedAt: endedAt,
+                notes: notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes
+            )
+            AppLogger.info("Added missed fast \(session.id)", category: "History")
+            dismiss()
+        } catch FastingError.overlappingSession {
+            errorMessage = AppStrings.localized("history_add_fast_overlap")
+        } catch {
+            errorMessage = error.localizedDescription
+            AppLogger.error("Failed to add missed fast: \(error)", category: "History")
+        }
     }
 }
 
@@ -284,6 +449,7 @@ private struct AllFastsScreen: View {
                     delete(deletingSession)
                 }
             }
+            .accessibilityIdentifier("history.confirmDeleteFastButton")
             Button(AppStrings.cancel, role: .cancel) {}
         } message: {
             Text(AppStrings.localized("history_delete_fast_message"))

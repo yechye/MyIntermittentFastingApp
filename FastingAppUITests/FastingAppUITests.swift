@@ -183,6 +183,38 @@ final class FastingAppUITests: XCTestCase {
     }
 
     @MainActor
+    func testHistoryCanAddMissedFast() throws {
+        let app = XCUIApplication()
+        launchHistory(in: app)
+
+        app.buttons["history.addMissedFastButton"].tap()
+
+        let saveButton = app.buttons["history.saveMissedFastButton"]
+        XCTAssertTrue(saveButton.waitForExistence(timeout: 5))
+        saveButton.tap()
+
+        let fastRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history.fastRow.")).firstMatch
+        XCTAssertTrue(fastRow.waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testHistoryCanDeleteFast() throws {
+        let app = XCUIApplication()
+        launchHistory(in: app, extraArguments: ["-seedCompletedFastForUITests"])
+
+        let deleteButton = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history.deleteFastButton.")).firstMatch
+        XCTAssertTrue(deleteButton.waitForExistence(timeout: 5))
+        deleteButton.tap()
+
+        let destructiveButtons = app.buttons.matching(NSPredicate(format: "label == %@", "Delete Fast"))
+        XCTAssertTrue(waitForButtonCount(atLeast: 2, in: destructiveButtons, timeout: 5))
+        destructiveButtons.firstMatch.tap()
+
+        let remainingDeleteButtons = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history.deleteFastButton."))
+        XCTAssertTrue(waitForButtonCount(equalTo: 0, in: remainingDeleteButtons, timeout: 5))
+    }
+
+    @MainActor
     func disabled_testLaunchPerformance() throws {
         // Rename to `testLaunchPerformance` when launch metrics should be collected.
         // This measures how long it takes to launch your application.
@@ -266,5 +298,49 @@ final class FastingAppUITests: XCTestCase {
         } else {
             XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "schedule.day.2").firstMatch.waitForExistence(timeout: 8))
         }
+    }
+
+    @MainActor
+    private func waitForButtonCount(atLeast minimumCount: Int, in query: XCUIElementQuery, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if query.count >= minimumCount {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return query.count >= minimumCount
+    }
+
+    @MainActor
+    private func waitForButtonCount(equalTo expectedCount: Int, in query: XCUIElementQuery, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if query.count == expectedCount {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return query.count == expectedCount
+    }
+
+    @MainActor
+    private func launchHistory(
+        in app: XCUIApplication,
+        language: String? = "en",
+        extraArguments: [String] = []
+    ) {
+        app.launchArguments = [
+            "-resetTimerForUITests",
+            "-skipSplashForUITests",
+            "-openHistoryForUITests",
+            "-useInMemoryStoreForUITests"
+        ] + extraArguments
+        if let language {
+            app.launchArguments += ["-AppleLanguages", "(\(language))", "-AppleLocale", language]
+        }
+        app.launch()
+
+        XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 8))
     }
 }

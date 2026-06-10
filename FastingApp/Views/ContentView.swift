@@ -7,11 +7,22 @@ struct ContentView: View {
     @Query(sort: \FastingSession.startedAt, order: .reverse) private var sessions: [FastingSession]
     @Query(sort: \CheatDay.date, order: .reverse) private var cheatDays: [CheatDay]
     @AppStorage("selectedTheme") private var selectedThemeRaw = AppTheme.system.rawValue
-    @State private var selectedTab = ProcessInfo.processInfo.arguments.contains("-openScheduleForUITests") ? AppTab.schedule : AppTab.timer
+    @State private var selectedTab = ContentView.initialTab
     @State private var latestWeight: WeightSample?
     @State private var weightLoadFailed = false
     @State private var confirmation: TimerConfirmation?
     @State private var isStartingFast = false
+
+    private static var initialTab: AppTab {
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-openScheduleForUITests") {
+            return .schedule
+        }
+        if arguments.contains("-openHistoryForUITests") {
+            return .insights
+        }
+        return .timer
+    }
 
     private var activeSession: FastingSession? {
         return sessions.first { $0.status == .active && $0.deletedAt == nil }

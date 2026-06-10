@@ -192,6 +192,9 @@ Logging/debugging implementation:
 - Verified the iOS project builds and the early-fast-ending UI tests pass after the logging update.
 - Added the fasting history page in Insights with range charts, fasting/eating totals, saved fast lists, grouped all-history view, CSV export, and individual fast phase detail.
 - Verified targeted history calculator/export unit tests and the iOS project build after the history implementation.
+- Added missed-fast entry from History with start/end validation, notes, conflict preview, and overlap protection against saved or active fasts.
+- Verified targeted fasting session lifecycle tests after adding missed-fast entry.
+- Added targeted UI coverage for adding a missed fast from History and deleting a saved history fast.
 
 ## Verification Status
 
@@ -202,6 +205,26 @@ xcodebuild -project FastingApp.xcodeproj -scheme FastingApp -destination 'generi
 ```
 
 Result: succeeded after integrating the corrected watch-logo splash screen into app startup.
+
+Most recent missed-fast verification:
+
+```sh
+xcodebuild test -project FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:FastingAppTests/FastingSessionTests
+```
+
+Result: succeeded, 23 targeted fasting session tests passed.
+
+```sh
+xcodebuild test -project FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:FastingAppUITests/FastingAppUITests/testHistoryCanAddMissedFast -only-testing:FastingAppUITests/FastingAppUITests/testHistoryCanDeleteFast
+```
+
+Result: succeeded, 2 targeted History UI tests passed.
+
+```sh
+xcodebuild -project FastingApp.xcodeproj -scheme FastingApp -destination 'generic/platform=iOS Simulator' build
+```
+
+Result: succeeded after adding missed-fast entry, overlap handling, and targeted History UI coverage.
 
 Most recent logging verification:
 
