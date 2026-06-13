@@ -1,6 +1,6 @@
 # FeastClock App Context
 
-Last updated: 2026-06-09
+Last updated: 2026-06-10
 
 This is the living knowledge base for FeastClock. Update it whenever product requirements, naming, styling, branding, core flows, assets, or implementation details change. Treat it as the handoff file for future design and engineering work.
 
@@ -150,6 +150,17 @@ Core app structure includes:
 - History/Insights: selectable 7-day, 30-day, 180-day, and 1-year history view with Swift Charts, all-time grouped fast list, CSV sharing, and Healthline-inspired fasting phase detail.
 - Tests: fasting sessions, fasting plans, weekly schedule, notifications, streaks, settings, cheat days, and HealthKit service behavior.
 
+Settings implementation:
+
+- Settings is now a production SwiftData-backed screen, not a demo-only `@AppStorage` surface.
+- The screen follows the existing Timer, Schedule, and Insights visual language: off-white background, sage section labels, compact grouped rows, `lumeSurface` cards, subtle borders, and native SwiftUI controls.
+- Persisted behavior settings live in the singleton `UserSettings`: default plan, default start time, fasting reminders, fast completion alert, HealthKit weight sync, weight unit, and time format.
+- Root-level app preferences remain in `UserDefaults`: theme, in-app language, and minimum log level.
+- In-app language supports System, English, and Hebrew. Hebrew applies right-to-left layout direction and uses the Hebrew `.lproj` bundle.
+- The previous separate Eating Window Alert setting was removed; Fast Completion Alert covers the target-reached/eating-window-open notification.
+- Time format and weight unit settings are applied beyond Settings: Timer, Schedule, History rows, and fasting-history CSV export use shared formatting helpers.
+- Reset App Data clears fasting sessions, weekly schedules, and cheat days while preserving preferences, plans, theme, language, HealthKit choice, and log level.
+
 Logging/debugging implementation:
 
 - App logging is centralized in `AppLogger`:
@@ -195,6 +206,7 @@ Logging/debugging implementation:
 - Added missed-fast entry from History with start/end validation, notes, conflict preview, and overlap protection against saved or active fasts.
 - Verified targeted fasting session lifecycle tests after adding missed-fast entry.
 - Added targeted UI coverage for adding a missed fast from History and deleting a saved history fast.
+- Rebuilt Settings as a production SwiftData-backed page, removed the redundant eating-window alert, added in-app language selection, wired global time/weight/default-plan/default-start/notification/reset behavior, and added targeted settings tests.
 
 ## Verification Status
 
@@ -204,7 +216,21 @@ Most recent build verification:
 xcodebuild -project FastingApp.xcodeproj -scheme FastingApp -destination 'generic/platform=iOS Simulator' build
 ```
 
-Result: succeeded after integrating the corrected watch-logo splash screen into app startup.
+Result: succeeded after the Settings production implementation.
+
+Most recent Settings verification:
+
+```sh
+xcodebuild test -project FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:FastingAppTests/UserSettingsTests -only-testing:FastingAppTests/NotificationTests -only-testing:FastingAppTests/HealthKitServiceTests
+```
+
+Result: succeeded, 16 targeted settings, notification, and HealthKit tests passed.
+
+```sh
+xcodebuild test -project FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:FastingAppUITests/FastingAppUITests/testSettingsShowsProductionRows
+```
+
+Result: succeeded after clearing a stale simulator install; the Settings UI smoke test passed.
 
 Most recent missed-fast verification:
 

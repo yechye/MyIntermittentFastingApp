@@ -60,7 +60,7 @@ final class WeeklyScheduleService {
         row.updatedAt = dateProvider.now
         rowsByWeekday[weekday] = row
 
-        notificationService.rescheduleReminder(for: row, notificationsEnabled: settingsService.notificationsEnabled)
+        notificationService.rescheduleReminder(for: row, notificationsEnabled: settingsService.fastingRemindersEnabled)
         return row
     }
 

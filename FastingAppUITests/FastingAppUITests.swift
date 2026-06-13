@@ -215,6 +215,23 @@ final class FastingAppUITests: XCTestCase {
     }
 
     @MainActor
+    func testSettingsShowsProductionRows() throws {
+        let app = XCUIApplication()
+        launchSettings(in: app)
+
+        XCTAssertTrue(app.staticTexts["Fasting Preferences"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Default Plan"].exists)
+        XCTAssertTrue(app.staticTexts["Default Start Time"].exists)
+        XCTAssertTrue(app.staticTexts["Fasting Reminders"].exists)
+        XCTAssertTrue(app.staticTexts["Fast Completion Alert"].exists)
+        XCTAssertFalse(app.staticTexts["Eating Window Alert"].exists)
+        XCTAssertTrue(app.staticTexts["Language & Format"].exists)
+        XCTAssertTrue(app.staticTexts["App Language"].exists)
+        XCTAssertTrue(app.staticTexts["Time Format"].exists)
+        XCTAssertTrue(app.buttons["settings.resetDataButton"].exists)
+    }
+
+    @MainActor
     func disabled_testLaunchPerformance() throws {
         // Rename to `testLaunchPerformance` when launch metrics should be collected.
         // This measures how long it takes to launch your application.
@@ -342,5 +359,22 @@ final class FastingAppUITests: XCTestCase {
         app.launch()
 
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 8))
+    }
+
+    @MainActor
+    private func launchSettings(in app: XCUIApplication) {
+        app.launchArguments = [
+            "-resetTimerForUITests",
+            "-skipSplashForUITests",
+            "-openSettingsForUITests",
+            "-useInMemoryStoreForUITests",
+            "-AppleLanguages",
+            "(en)",
+            "-AppleLocale",
+            "en"
+        ]
+        app.launch()
+
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 8))
     }
 }

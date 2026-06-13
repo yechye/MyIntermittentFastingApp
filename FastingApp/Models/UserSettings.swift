@@ -14,11 +14,15 @@ enum TimeFormat: String, Codable {
 
 @Model
 final class UserSettings {
+    static let defaultStartTimeMinutesFromMidnight = 20 * 60 + 30
+
     var id: UUID = UUID()
     @Relationship(deleteRule: .nullify) var defaultPlan: FastingPlan?
+    var defaultStartTimeMinutesFromMidnightStorage: Int?
     var weightUnitRaw: String
     var timeFormatRaw: String
-    var notificationsEnabled: Bool
+    var fastingRemindersEnabledStorage: Bool?
+    var fastCompletionAlertEnabledStorage: Bool?
     var healthKitWeightEnabled: Bool
     var hasCompletedOnboarding: Bool
     var createdAt: Date
@@ -36,12 +40,32 @@ final class UserSettings {
         set { timeFormatRaw = newValue.rawValue }
     }
 
+    @Transient
+    var defaultStartTimeMinutesFromMidnight: Int {
+        get { defaultStartTimeMinutesFromMidnightStorage ?? Self.defaultStartTimeMinutesFromMidnight }
+        set { defaultStartTimeMinutesFromMidnightStorage = newValue }
+    }
+
+    @Transient
+    var fastingRemindersEnabled: Bool {
+        get { fastingRemindersEnabledStorage ?? true }
+        set { fastingRemindersEnabledStorage = newValue }
+    }
+
+    @Transient
+    var fastCompletionAlertEnabled: Bool {
+        get { fastCompletionAlertEnabledStorage ?? true }
+        set { fastCompletionAlertEnabledStorage = newValue }
+    }
+
     init(
         id: UUID = UUID(),
         defaultPlan: FastingPlan? = nil,
+        defaultStartTimeMinutesFromMidnight: Int = UserSettings.defaultStartTimeMinutesFromMidnight,
         weightUnit: WeightUnit = .kg,
         timeFormat: TimeFormat = .system,
-        notificationsEnabled: Bool = false,
+        fastingRemindersEnabled: Bool = true,
+        fastCompletionAlertEnabled: Bool = true,
         healthKitWeightEnabled: Bool = false,
         hasCompletedOnboarding: Bool = false,
         createdAt: Date,
@@ -49,9 +73,11 @@ final class UserSettings {
     ) {
         self.id = id
         self.defaultPlan = defaultPlan
+        self.defaultStartTimeMinutesFromMidnightStorage = defaultStartTimeMinutesFromMidnight
         self.weightUnitRaw = weightUnit.rawValue
         self.timeFormatRaw = timeFormat.rawValue
-        self.notificationsEnabled = notificationsEnabled
+        self.fastingRemindersEnabledStorage = fastingRemindersEnabled
+        self.fastCompletionAlertEnabledStorage = fastCompletionAlertEnabled
         self.healthKitWeightEnabled = healthKitWeightEnabled
         self.hasCompletedOnboarding = hasCompletedOnboarding
         self.createdAt = createdAt

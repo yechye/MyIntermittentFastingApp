@@ -66,11 +66,16 @@ struct FastingAppApp: App {
         let context = container.mainContext
         let dateProvider = SystemDateProvider()
         let notificationService = NotificationService()
-        let settingsService = UserSettingsService(context: context, dateProvider: dateProvider)
+        let settingsService = UserSettingsService(context: context, dateProvider: dateProvider, notificationService: notificationService)
         let bootstrapper = AppBootstrapper(
             planService: FastingPlanService(context: context, dateProvider: dateProvider),
             settingsService: settingsService,
-            sessionService: FastingSessionService(context: context, dateProvider: dateProvider, notificationService: notificationService),
+            sessionService: FastingSessionService(
+                context: context,
+                dateProvider: dateProvider,
+                notificationService: notificationService,
+                fastCompletionAlertEnabled: { settingsService.fastCompletionAlertEnabled }
+            ),
             scheduleService: WeeklyScheduleService(
                 context: context,
                 dateProvider: dateProvider,

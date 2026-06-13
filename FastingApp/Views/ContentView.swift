@@ -6,7 +6,9 @@ struct ContentView: View {
     @Query(sort: \FastingPlan.name) private var plans: [FastingPlan]
     @Query(sort: \FastingSession.startedAt, order: .reverse) private var sessions: [FastingSession]
     @Query(sort: \CheatDay.date, order: .reverse) private var cheatDays: [CheatDay]
+    @Query(sort: \UserSettings.createdAt) private var settingsRows: [UserSettings]
     @AppStorage("selectedTheme") private var selectedThemeRaw = AppTheme.system.rawValue
+    @AppStorage(AppLanguage.storageKey) private var selectedLanguageRaw = AppLanguage.system.storageValue
     @State private var selectedTab = ContentView.initialTab
     @State private var latestWeight: WeightSample?
     @State private var weightLoadFailed = false
@@ -20,6 +22,9 @@ struct ContentView: View {
         }
         if arguments.contains("-openHistoryForUITests") {
             return .insights
+        }
+        if arguments.contains("-openSettingsForUITests") {
+            return .settings
         }
         return .timer
     }
@@ -41,6 +46,9 @@ struct ContentView: View {
                     streak: currentStreak,
                     latestWeight: latestWeight,
                     weightLoadFailed: weightLoadFailed,
+                    weightUnit: userSettings?.weightUnit ?? .kg,
+                    timeFormat: userSettings?.timeFormat ?? .system,
+                    selectedLanguage: selectedLanguage,
                     isStartingFast: isStartingFast,
                     startFast: startFast,
                     requestEnd: requestEndFast,
@@ -79,6 +87,8 @@ struct ContentView: View {
         }
         .tint(.lumeSage)
         .preferredColorScheme(selectedTheme.colorScheme)
+        .environment(\.locale, selectedLanguage.locale)
+        .environment(\.layoutDirection, selectedLanguage.layoutDirection)
         .onChange(of: selectedTab) { _, newValue in
             AppLogger.info("Selected tab: \(newValue.rawValue)", category: "Interaction")
         }
@@ -136,6 +146,10 @@ struct ContentView: View {
         AppTheme(rawValue: selectedThemeRaw) ?? .system
     }
 
+    private var selectedLanguage: AppLanguage {
+        AppLanguage(storageValue: selectedLanguageRaw)
+    }
+
     private var selectedThemeBinding: Binding<AppTheme> {
         Binding(
             get: { selectedTheme },
@@ -147,14 +161,19 @@ struct ContentView: View {
     }
 
     private var defaultPlan: FastingPlan? {
-        plans.first { $0.name == "16:8" } ?? plans.first
+        userSettings?.defaultPlan ?? plans.first { $0.name == "16:8" } ?? plans.first
+    }
+
+    private var userSettings: UserSettings? {
+        settingsRows.first
     }
 
     @MainActor
     private func makeSessionService() -> FastingSessionService {
         FastingSessionService(
             context: modelContext,
-            notificationService: NotificationService()
+            notificationService: NotificationService(),
+            fastCompletionAlertEnabled: { userSettings?.fastCompletionAlertEnabled ?? true }
         )
     }
 
@@ -301,6 +320,11 @@ struct ContentView: View {
     }
 
     private func loadLatestWeight() async {
+        guard userSettings?.healthKitWeightEnabled == true else {
+            latestWeight = nil
+            weightLoadFailed = false
+            return
+        }
         do {
             let endDate = Date()
             let startDate = Calendar.current.date(byAdding: .year, value: -1, to: endDate) ?? endDate

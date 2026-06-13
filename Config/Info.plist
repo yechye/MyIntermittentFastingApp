@@ -22,6 +22,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>FeastClock reads your weight from Apple Health to show optional weight context alongside your fasting progress.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>HankenGrotesk-VariableFont_wght.ttf</string>

@@ -6,11 +6,18 @@ final class FastingSessionService: FastingSessionServiceProtocol {
     private let context: ModelContext
     private let dateProvider: DateProviding
     private let notificationService: NotificationServiceProtocol
+    private let fastCompletionAlertEnabled: () -> Bool
 
-    init(context: ModelContext, dateProvider: DateProviding = SystemDateProvider(), notificationService: NotificationServiceProtocol) {
+    init(
+        context: ModelContext,
+        dateProvider: DateProviding = SystemDateProvider(),
+        notificationService: NotificationServiceProtocol,
+        fastCompletionAlertEnabled: @escaping () -> Bool = { true }
+    ) {
         self.context = context
         self.dateProvider = dateProvider
         self.notificationService = notificationService
+        self.fastCompletionAlertEnabled = fastCompletionAlertEnabled
     }
 
     @discardableResult
@@ -30,7 +37,9 @@ final class FastingSessionService: FastingSessionServiceProtocol {
         )
         context.insert(session)
         try context.save()
-        notificationService.scheduleFastEndNotification(for: session, elapsedMinutes: 0)
+        if fastCompletionAlertEnabled() {
+            notificationService.scheduleFastEndNotification(for: session, elapsedMinutes: 0)
+        }
         return session
     }
 

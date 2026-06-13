@@ -53,6 +53,8 @@ final class NotificationTests: XCTestCase {
         let container = try makeInMemoryContainer()
         let notifications = MockNotificationService()
         let settings = UserSettingsService(context: container.mainContext, dateProvider: MockDateProvider(.now))
+        let userSettings = try settings.fetchOrCreate()
+        try settings.update(userSettings) { $0.fastingRemindersEnabled = false }
         let service = WeeklyScheduleService(
             context: container.mainContext,
             dateProvider: MockDateProvider(.now),
@@ -70,7 +72,7 @@ final class NotificationTests: XCTestCase {
         let notifications = MockNotificationService()
         let settings = UserSettingsService(context: container.mainContext, dateProvider: MockDateProvider(.now))
         let userSettings = try settings.fetchOrCreate()
-        try settings.update(userSettings) { $0.notificationsEnabled = true }
+        try settings.update(userSettings) { $0.fastingRemindersEnabled = true }
         let service = WeeklyScheduleService(
             context: container.mainContext,
             dateProvider: MockDateProvider(.now),
@@ -81,5 +83,20 @@ final class NotificationTests: XCTestCase {
         try service.save(weekday: 2, plan: nil, isFastingDay: true, isCheatDay: false, startTime: 1_200, reminderEnabled: true)
         try service.save(weekday: 2, plan: nil, isFastingDay: true, isCheatDay: false, startTime: 1_260, reminderEnabled: true)
         XCTAssertEqual(notifications.rescheduledWeekdays, [2, 2])
+    }
+
+    func test_fastEndNotificationNotScheduledWhenCompletionAlertDisabled() throws {
+        let container = try makeInMemoryContainer()
+        let notifications = MockNotificationService()
+        let service = FastingSessionService(
+            context: container.mainContext,
+            dateProvider: MockDateProvider(.now),
+            notificationService: notifications,
+            fastCompletionAlertEnabled: { false }
+        )
+
+        _ = try service.startFast(plan: nil, source: .manual, date: .now)
+
+        XCTAssertTrue(notifications.scheduledFastEndIds.isEmpty)
     }
 }

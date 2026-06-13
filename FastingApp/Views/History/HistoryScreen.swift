@@ -5,6 +5,7 @@ import SwiftUI
 struct HistoryScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \FastingSession.startedAt, order: .reverse) private var sessions: [FastingSession]
+    @Query(sort: \UserSettings.createdAt) private var settingsRows: [UserSettings]
     @State private var selectedRange: FastingHistoryRange = .thirtyDays
     @State private var selectedSession: FastingSession?
     @State private var deletingSession: FastingSession?
@@ -33,7 +34,7 @@ struct HistoryScreen: View {
     }
 
     private var export: FastingHistoryExport {
-        FastingHistoryExport(csvText: FastingHistoryExporter().csv(for: allHistorySessions))
+        FastingHistoryExport(csvText: FastingHistoryExporter().csv(for: allHistorySessions, timeFormat: settingsRows.first?.timeFormat ?? .system))
     }
 
     var body: some View {
@@ -533,7 +534,12 @@ private struct FastDetailScreen: View {
 }
 
 private struct FastRow: View {
+    @Query(sort: \UserSettings.createdAt) private var settingsRows: [UserSettings]
     let session: FastingSession
+
+    private var timeFormat: TimeFormat {
+        settingsRows.first?.timeFormat ?? .system
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -571,8 +577,8 @@ private struct FastRow: View {
     }
 
     private var timeRangeText: String {
-        let start = session.startedAt.formatted(date: .omitted, time: .shortened)
-        let end = session.endedAt?.formatted(date: .omitted, time: .shortened) ?? AppStrings.notStarted
+        let start = AppTimeFormatter.timeString(from: session.startedAt, timeFormat: timeFormat)
+        let end = session.endedAt.map { AppTimeFormatter.timeString(from: $0, timeFormat: timeFormat) } ?? AppStrings.notStarted
         return "\(start) - \(end)"
     }
 

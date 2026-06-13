@@ -1,88 +1,158 @@
 import SwiftUI
 
+enum AppLanguage: String, CaseIterable, Identifiable {
+    static let storageKey = "selectedAppLanguage"
+
+    case system
+    case english
+    case hebrew
+
+    var id: String { rawValue }
+
+    init(storageValue: String) {
+        self = Self(rawValue: storageValue) ?? .system
+    }
+
+    var storageValue: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .system:
+            return AppStrings.localized("theme_system_label")
+        case .english:
+            return AppStrings.localized("settings_language_english")
+        case .hebrew:
+            return AppStrings.localized("settings_language_hebrew")
+        }
+    }
+
+    var locale: Locale {
+        switch self {
+        case .system:
+            return .current
+        case .english:
+            return Locale(identifier: "en")
+        case .hebrew:
+            return Locale(identifier: "he")
+        }
+    }
+
+    var layoutDirection: LayoutDirection {
+        switch self {
+        case .system:
+            return Locale.Language(identifier: Locale.current.identifier).characterDirection == .rightToLeft ? .rightToLeft : .leftToRight
+        case .english:
+            return .leftToRight
+        case .hebrew:
+            return .rightToLeft
+        }
+    }
+
+    fileprivate var localizationBundle: Bundle {
+        switch self {
+        case .system:
+            return .main
+        case .english:
+            return Bundle.localizedBundle(languageCode: "en")
+        case .hebrew:
+            return Bundle.localizedBundle(languageCode: "he")
+        }
+    }
+}
+
+private extension Bundle {
+    static func localizedBundle(languageCode: String) -> Bundle {
+        guard let path = Bundle.main.path(forResource: languageCode, ofType: "lproj"),
+              let bundle = Bundle(path: path)
+        else { return .main }
+        return bundle
+    }
+}
+
 enum AppStrings {
-    static let timer = localized("timer_label")
-    static let schedule = localized("schedule_label")
-    static let insights = localized("insights_label")
-    static let settings = localized("settings_label")
-    static let appearance = localized("appearance_label")
-    static let theme = localized("theme_label")
-    static let elapsed = localized("elapsed_label")
-    static let remaining = localized("remaining_label")
-    static let complete = localized("complete_label")
-    static let dayStreak = localized("day_streak_label")
-    static let started = localized("started_label")
-    static let eatingWindowOpens = localized("eating_window_label")
-    static let progress = localized("progress_label")
-    static let weight = localized("weight_label")
-    static let recorded = localized("recorded_label")
-    static let timeElapsed = localized("time_elapsed_label")
-    static let fastingStarted = localized("fasting_started_label")
-    static let currentTime = localized("current_time_label")
-    static let endFast = localized("end_fast_button")
-    static let endFastEarly = localized("end_fast_early_button")
-    static let saveAsCompleted = localized("save_as_completed_button")
-    static let saveAsSkipped = localized("save_as_skipped_button")
-    static let discardFast = localized("discard_fast_button")
-    static let cancel = localized("cancel_button")
-    static let done = localized("done_button")
-    static let edit = localized("edit_button")
-    static let fastingWindow = localized("fasting_window_label")
-    static let eatingWindow = localized("eating_window_phase_label")
-    static let notStarted = localized("not_started_label")
-    static let appleHealth = localized("apple_health_label")
-    static let appleHealthUnavailable = localized("apple_health_unavailable_label")
-    static let noAppleHealthReading = localized("no_apple_health_reading_label")
-    static let appName = localized("app_name_label")
-    static let fastingActive = localized("fasting_active_label")
-    static let readyToFast = localized("ready_to_fast_label")
-    static let target = localized("target_label")
-    static let windowOpens = localized("window_opens_label")
-    static let burningFat = localized("burning_fat_label")
-    static let metabolicSwitchActive = localized("metabolic_switch_active_label")
-    static let editStartTime = localized("edit_start_time_button")
-    static let scheduleWeeklyOverview = localized("schedule_weekly_overview_label")
-    static let scheduleTemplates = localized("schedule_templates_button")
-    static let scheduleMedicalNote = localized("schedule_medical_note")
-    static let scheduleTitle = localized("schedule_title")
-    static let scheduleApplyTemplateTitle = localized("schedule_apply_template_title")
-    static let scheduleTemplateMessage = localized("schedule_template_message")
-    static let scheduleCurrentPlan = localized("schedule_current_plan_label")
-    static let scheduleBuildRhythm = localized("schedule_build_rhythm_title")
-    static let scheduleChooseTemplate = localized("schedule_choose_template_summary")
-    static let scheduleApplyStartTitle = localized("schedule_apply_start_title")
-    static let scheduleApplyStartButton = localized("schedule_apply_start_button")
-    static let scheduleKeepSingleDayButton = localized("schedule_keep_single_day_button")
-    static let scheduleToday = localized("schedule_today_label")
-    static let scheduleOpen = localized("schedule_open_label")
-    static let scheduleRestrictedDay = localized("schedule_restricted_day_label")
-    static let scheduleNormalDay = localized("schedule_normal_day_label")
-    static let scheduleCheatDay = localized("schedule_cheat_day_label")
-    static let scheduleStartTimeNeeded = localized("schedule_start_time_needed")
-    static let scheduleNoFastingRequirement = localized("schedule_no_fasting_requirement")
-    static let scheduleRemindersPaused = localized("schedule_reminders_paused")
-    static let scheduleRecommended = localized("schedule_recommended_label")
-    static let scheduleAdvanced = localized("schedule_advanced_label")
-    static let scheduleSelectTemplate = localized("schedule_select_template_title")
-    static let close = localized("close_button")
-    static let scheduleDayState = localized("schedule_day_state_section")
-    static let schedulePlanSelection = localized("schedule_plan_selection_section")
-    static let schedulePlan = localized("schedule_plan_label")
-    static let scheduleFastingStarts = localized("schedule_fasting_starts_label")
-    static let scheduleNotifyStart = localized("schedule_notify_start_label")
-    static let scheduleFastingPreview = localized("schedule_fasting_preview_section")
-    static let scheduleRestrictedGuidance = localized("schedule_restricted_guidance_section")
-    static let scheduleCheatDaySection = localized("schedule_cheat_day_section")
-    static let scheduleReason = localized("schedule_reason_placeholder")
-    static let scheduleExcludeCheat = localized("schedule_exclude_cheat_toggle")
-    static let save = localized("save_button")
-    static let scheduleChoosePlanStart = localized("schedule_choose_plan_start")
-    static let scheduleCompletedFast = localized("schedule_completed_fast_label")
-    static let scheduleFastOnTarget = localized("schedule_fast_on_target_label")
-    static let historyTitle = localized("history_title")
+    static var timer = localized("timer_label")
+    static var schedule = localized("schedule_label")
+    static var insights = localized("insights_label")
+    static var settings = localized("settings_label")
+    static var appearance = localized("appearance_label")
+    static var theme = localized("theme_label")
+    static var elapsed = localized("elapsed_label")
+    static var remaining = localized("remaining_label")
+    static var complete = localized("complete_label")
+    static var dayStreak = localized("day_streak_label")
+    static var started = localized("started_label")
+    static var eatingWindowOpens = localized("eating_window_label")
+    static var progress = localized("progress_label")
+    static var weight = localized("weight_label")
+    static var recorded = localized("recorded_label")
+    static var timeElapsed = localized("time_elapsed_label")
+    static var fastingStarted = localized("fasting_started_label")
+    static var currentTime = localized("current_time_label")
+    static var endFast = localized("end_fast_button")
+    static var endFastEarly = localized("end_fast_early_button")
+    static var saveAsCompleted = localized("save_as_completed_button")
+    static var saveAsSkipped = localized("save_as_skipped_button")
+    static var discardFast = localized("discard_fast_button")
+    static var cancel = localized("cancel_button")
+    static var done = localized("done_button")
+    static var edit = localized("edit_button")
+    static var fastingWindow = localized("fasting_window_label")
+    static var eatingWindow = localized("eating_window_phase_label")
+    static var notStarted = localized("not_started_label")
+    static var appleHealth = localized("apple_health_label")
+    static var appleHealthUnavailable = localized("apple_health_unavailable_label")
+    static var noAppleHealthReading = localized("no_apple_health_reading_label")
+    static var appName = localized("app_name_label")
+    static var fastingActive = localized("fasting_active_label")
+    static var readyToFast = localized("ready_to_fast_label")
+    static var target = localized("target_label")
+    static var windowOpens = localized("window_opens_label")
+    static var burningFat = localized("burning_fat_label")
+    static var metabolicSwitchActive = localized("metabolic_switch_active_label")
+    static var editStartTime = localized("edit_start_time_button")
+    static var scheduleWeeklyOverview = localized("schedule_weekly_overview_label")
+    static var scheduleTemplates = localized("schedule_templates_button")
+    static var scheduleMedicalNote = localized("schedule_medical_note")
+    static var scheduleTitle = localized("schedule_title")
+    static var scheduleApplyTemplateTitle = localized("schedule_apply_template_title")
+    static var scheduleTemplateMessage = localized("schedule_template_message")
+    static var scheduleCurrentPlan = localized("schedule_current_plan_label")
+    static var scheduleBuildRhythm = localized("schedule_build_rhythm_title")
+    static var scheduleChooseTemplate = localized("schedule_choose_template_summary")
+    static var scheduleApplyStartTitle = localized("schedule_apply_start_title")
+    static var scheduleApplyStartButton = localized("schedule_apply_start_button")
+    static var scheduleKeepSingleDayButton = localized("schedule_keep_single_day_button")
+    static var scheduleToday = localized("schedule_today_label")
+    static var scheduleOpen = localized("schedule_open_label")
+    static var scheduleRestrictedDay = localized("schedule_restricted_day_label")
+    static var scheduleNormalDay = localized("schedule_normal_day_label")
+    static var scheduleCheatDay = localized("schedule_cheat_day_label")
+    static var scheduleStartTimeNeeded = localized("schedule_start_time_needed")
+    static var scheduleNoFastingRequirement = localized("schedule_no_fasting_requirement")
+    static var scheduleRemindersPaused = localized("schedule_reminders_paused")
+    static var scheduleRecommended = localized("schedule_recommended_label")
+    static var scheduleAdvanced = localized("schedule_advanced_label")
+    static var scheduleSelectTemplate = localized("schedule_select_template_title")
+    static var close = localized("close_button")
+    static var scheduleDayState = localized("schedule_day_state_section")
+    static var schedulePlanSelection = localized("schedule_plan_selection_section")
+    static var schedulePlan = localized("schedule_plan_label")
+    static var scheduleFastingStarts = localized("schedule_fasting_starts_label")
+    static var scheduleNotifyStart = localized("schedule_notify_start_label")
+    static var scheduleFastingPreview = localized("schedule_fasting_preview_section")
+    static var scheduleRestrictedGuidance = localized("schedule_restricted_guidance_section")
+    static var scheduleCheatDaySection = localized("schedule_cheat_day_section")
+    static var scheduleReason = localized("schedule_reason_placeholder")
+    static var scheduleExcludeCheat = localized("schedule_exclude_cheat_toggle")
+    static var save = localized("save_button")
+    static var scheduleChoosePlanStart = localized("schedule_choose_plan_start")
+    static var scheduleCompletedFast = localized("schedule_completed_fast_label")
+    static var scheduleFastOnTarget = localized("schedule_fast_on_target_label")
+    static var historyTitle = localized("history_title")
 
     static func localized(_ key: String) -> String {
-        NSLocalizedString(key, tableName: nil, bundle: .main, value: key, comment: "")
+        let language = AppLanguage(storageValue: UserDefaults.standard.string(forKey: AppLanguage.storageKey) ?? AppLanguage.system.storageValue)
+        return NSLocalizedString(key, tableName: nil, bundle: language.localizationBundle, value: key, comment: "")
     }
 
     static func startFast(_ planName: String) -> String {
@@ -202,6 +272,7 @@ enum AppStrings {
     }
 
     private static func format(_ key: String, _ arguments: CVarArg...) -> String {
-        String(format: localized(key), locale: Locale.current, arguments: arguments)
+        let language = AppLanguage(storageValue: UserDefaults.standard.string(forKey: AppLanguage.storageKey) ?? AppLanguage.system.storageValue)
+        return String(format: localized(key), locale: language.locale, arguments: arguments)
     }
 }

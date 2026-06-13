@@ -14,7 +14,7 @@ struct FastingHistoryExport: Transferable {
 }
 
 struct FastingHistoryExporter {
-    func csv(for sessions: [FastingSession], calendar: Calendar = .current) -> String {
+    func csv(for sessions: [FastingSession], calendar: Calendar = .current, timeFormat: TimeFormat = .system) -> String {
         let dateFormatter = DateFormatter()
         dateFormatter.calendar = calendar
         dateFormatter.dateStyle = .medium
@@ -24,6 +24,14 @@ struct FastingHistoryExporter {
         timeFormatter.calendar = calendar
         timeFormatter.dateStyle = .none
         timeFormatter.timeStyle = .short
+        switch timeFormat {
+        case .system:
+            break
+        case .twelveHour:
+            timeFormatter.setLocalizedDateFormatFromTemplate("h:mm a")
+        case .twentyFourHour:
+            timeFormatter.setLocalizedDateFormatFromTemplate("HH:mm")
+        }
 
         let rows = sessions.map { session in
             [

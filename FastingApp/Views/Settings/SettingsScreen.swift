@@ -1,24 +1,32 @@
+import SwiftData
 import SwiftUI
 
 struct SettingsScreen: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \FastingPlan.name) private var plans: [FastingPlan]
+    @Query(sort: \FastingSession.startedAt, order: .reverse) private var sessions: [FastingSession]
+    @Query(sort: \UserSettings.createdAt) private var settingsRows: [UserSettings]
     @Binding var selectedTheme: AppTheme
-    @AppStorage("settings.defaultPlan") private var defaultPlan = "16:8"
-    @AppStorage("settings.defaultStartTime") private var defaultStartTimeInterval: Double = defaultStartTimeSeed.timeIntervalSinceReferenceDate
-    @AppStorage("settings.fastingReminders") private var fastingReminders = true
-    @AppStorage("settings.eatingWindowAlert") private var eatingWindowAlert = true
-    @AppStorage("settings.fastCompletionAlert") private var fastCompletionAlert = true
-    @AppStorage("settings.weightSync") private var weightSync = false
-    @AppStorage("settings.weightUnit") private var weightUnit = WeightUnit.kg.rawValue
-    @AppStorage("settings.timeFormat") private var timeFormat = TimeFormat.system.rawValue
+    @AppStorage(AppLanguage.storageKey) private var selectedLanguageRaw = AppLanguage.system.storageValue
     @AppStorage(AppLogger.minimumLevelKey) private var minimumLogLevel = AppLogger.defaultMinimumLevel.storageValue
+    @State private var settings: UserSettings?
+    @State private var errorMessage: String?
+    @State private var isResetConfirmationPresented = false
 
-    private let fastingPlans = ["16:8", "18:6", "20:4", "OMAD"]
-
-    private var defaultStartTime: Binding<Date> {
-        Binding(
-            get: { Date(timeIntervalSinceReferenceDate: defaultStartTimeInterval) },
-            set: { defaultStartTimeInterval = $0.timeIntervalSinceReferenceDate }
+    private var service: UserSettingsService {
+        UserSettingsService(
+            context: modelContext,
+            notificationService: NotificationService()
         )
+    }
+
+    private var activeSettings: UserSettings? {
+        settingsRows.first ?? settings
+    }
+
+    private var export: FastingHistoryExport {
+        let history = FastingHistoryCalculator().historySessions(from: sessions)
+        return FastingHistoryExport(csvText: FastingHistoryExporter().csv(for: history, timeFormat: activeSettings?.timeFormat ?? .system))
     }
 
     var body: some View {
@@ -33,49 +41,54 @@ struct SettingsScreen: View {
                     }
                     .pickerStyle(.segmented)
                     .padding(14)
+                    .accessibilityIdentifier("settings.themePicker")
                 }
 
                 SettingsSection(title: AppStrings.localized("settings_fasting_preferences_section")) {
                     SettingsPickerRow(
                         icon: "timer",
-                        iconColor: Color.lumeSage,
-                        iconBackground: Color.lumeSage.opacity(0.14),
                         title: AppStrings.localized("settings_default_plan_label"),
-                        selection: $defaultPlan,
-                        options: fastingPlans,
+                        selection: defaultPlanBinding,
+                        options: planNames,
                         displayName: fastingPlanTitle
                     )
                     SettingsDivider()
                     SettingsDateRow(
                         icon: "clock",
                         title: AppStrings.localized("settings_default_start_time_label"),
-                        selection: defaultStartTime
+                        selection: defaultStartTimeBinding
                     )
                 }
 
                 SettingsSection(title: AppStrings.localized("settings_notifications_section")) {
-                    SettingsToggleRow(icon: "bell", title: AppStrings.localized("settings_fasting_reminders_label"), isOn: $fastingReminders)
+                    SettingsToggleRow(
+                        icon: "bell",
+                        title: AppStrings.localized("settings_fasting_reminders_label"),
+                        isOn: fastingRemindersBinding
+                    )
                     SettingsDivider()
-                    SettingsToggleRow(icon: "fork.knife", title: AppStrings.localized("settings_eating_window_alert_label"), isOn: $eatingWindowAlert)
-                    SettingsDivider()
-                    SettingsToggleRow(icon: "checkmark.seal", title: AppStrings.localized("settings_fast_completion_alert_label"), isOn: $fastCompletionAlert)
+                    SettingsToggleRow(
+                        icon: "checkmark.seal",
+                        title: AppStrings.localized("settings_fast_completion_alert_label"),
+                        isOn: fastCompletionAlertBinding
+                    )
                 }
 
                 SettingsSection(title: AppStrings.localized("settings_health_section")) {
-                    SettingsNavigationRow(
+                    SettingsStaticRow(
                         icon: "heart.fill",
-                        iconColor: Color.red,
+                        iconColor: .red,
                         iconBackground: Color.red.opacity(0.1),
                         title: AppStrings.appleHealth,
-                        value: AppStrings.localized("settings_health_connected_status")
+                        value: activeSettings?.healthKitWeightEnabled == true ? AppStrings.localized("settings_health_connected_status") : AppStrings.localized("settings_health_not_connected_status")
                     )
                     SettingsDivider()
                     SettingsToggleRow(
                         icon: "scalemass",
-                        iconColor: Color.blue,
+                        iconColor: .blue,
                         iconBackground: Color.blue.opacity(0.1),
                         title: AppStrings.localized("settings_weight_sync_label"),
-                        isOn: $weightSync
+                        isOn: weightSyncBinding
                     )
                     SettingsDivider()
                     SettingsPickerRow(
@@ -83,27 +96,39 @@ struct SettingsScreen: View {
                         iconColor: Color.lumePrimary.opacity(0.72),
                         iconBackground: Color.lumeSurfaceSoft,
                         title: AppStrings.localized("settings_weight_unit_label"),
-                        selection: $weightUnit,
+                        selection: weightUnitBinding,
                         options: [WeightUnit.kg.rawValue, WeightUnit.lb.rawValue]
                     )
                 }
 
-                SettingsSection(title: AppStrings.localized("settings_time_format_section")) {
+                SettingsSection(title: AppStrings.localized("settings_language_format_section")) {
+                    SettingsPickerRow(
+                        icon: "globe",
+                        iconColor: Color.lumeSage,
+                        iconBackground: Color.lumeSage.opacity(0.14),
+                        title: AppStrings.localized("settings_language_label"),
+                        selection: languageBinding,
+                        options: AppLanguage.allCases.map(\.storageValue),
+                        displayName: { AppLanguage(storageValue: $0).title }
+                    )
+                    SettingsDivider()
                     SettingsPickerRow(
                         icon: "clock.badge",
-                        iconColor: Color.orange,
+                        iconColor: .orange,
                         iconBackground: Color.orange.opacity(0.12),
                         title: AppStrings.localized("settings_time_format_label"),
-                        selection: $timeFormat,
+                        selection: timeFormatBinding,
                         options: [TimeFormat.system.rawValue, TimeFormat.twelveHour.rawValue, TimeFormat.twentyFourHour.rawValue],
                         displayName: timeFormatTitle
                     )
                 }
 
                 SettingsSection(title: AppStrings.localized("settings_data_privacy_section")) {
-                    SettingsActionRow(icon: "square.and.arrow.up", title: AppStrings.localized("settings_export_history_label")) {
-                        AppLogger.info("Tapped export fasting history", category: "Interaction")
+                    ShareLink(item: export, preview: SharePreview(AppStrings.localized("history_export_title"))) {
+                        SettingsActionRowContent(icon: "square.and.arrow.up", title: AppStrings.localized("settings_export_history_label"))
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("settings.exportHistoryButton")
                     SettingsDivider()
                     SettingsActionRow(
                         icon: "trash",
@@ -112,8 +137,9 @@ struct SettingsScreen: View {
                         title: AppStrings.localized("settings_reset_data_label"),
                         titleColor: Color.timerDestructive
                     ) {
-                        AppLogger.warning("Tapped reset app data", category: "Interaction")
+                        isResetConfirmationPresented = true
                     }
+                    .accessibilityIdentifier("settings.resetDataButton")
                 }
                 Text(AppStrings.localized("settings_privacy_note"))
                     .font(.system(size: 13, weight: .regular))
@@ -124,7 +150,7 @@ struct SettingsScreen: View {
                 SettingsSection(title: AppStrings.localized("settings_debug_section")) {
                     SettingsPickerRow(
                         icon: "ladybug",
-                        iconColor: Color.purple,
+                        iconColor: .purple,
                         iconBackground: Color.purple.opacity(0.12),
                         title: AppStrings.localized("settings_log_level_label"),
                         selection: $minimumLogLevel,
@@ -149,30 +175,23 @@ struct SettingsScreen: View {
         }
         .background(Color.timerBackground)
         .navigationBarTitleDisplayMode(.large)
-        .onChange(of: defaultPlan) { _, newValue in
-            AppLogger.info("Changed default fasting plan to \(newValue)", category: "Interaction")
+        .task { loadSettings() }
+        .alert(AppStrings.localized("settings_error_title"), isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+            Button(AppStrings.localized("ok_button"), role: .cancel) {}
+        } message: {
+            Text(errorMessage ?? "")
         }
-        .onChange(of: defaultStartTimeInterval) { _, newValue in
-            let date = Date(timeIntervalSinceReferenceDate: newValue)
-            AppLogger.info("Changed default start time to \(date.formatted(date: .omitted, time: .shortened))", category: "Interaction")
-        }
-        .onChange(of: fastingReminders) { _, newValue in
-            AppLogger.info("Set fasting reminders to \(newValue)", category: "Interaction")
-        }
-        .onChange(of: eatingWindowAlert) { _, newValue in
-            AppLogger.info("Set eating window alert to \(newValue)", category: "Interaction")
-        }
-        .onChange(of: fastCompletionAlert) { _, newValue in
-            AppLogger.info("Set fast completion alert to \(newValue)", category: "Interaction")
-        }
-        .onChange(of: weightSync) { _, newValue in
-            AppLogger.info("Set weight sync to \(newValue)", category: "Interaction")
-        }
-        .onChange(of: weightUnit) { _, newValue in
-            AppLogger.info("Changed weight unit to \(newValue)", category: "Interaction")
-        }
-        .onChange(of: timeFormat) { _, newValue in
-            AppLogger.info("Changed time format to \(newValue)", category: "Interaction")
+        .confirmationDialog(
+            AppStrings.localized("settings_reset_data_title"),
+            isPresented: $isResetConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button(AppStrings.localized("settings_reset_data_confirm"), role: .destructive) {
+                resetFastingData()
+            }
+            Button(AppStrings.cancel, role: .cancel) {}
+        } message: {
+            Text(AppStrings.localized("settings_reset_data_message"))
         }
         .onChange(of: minimumLogLevel) { oldValue, newValue in
             let previousLevel = AppLogLevel(storageValue: oldValue)
@@ -181,9 +200,152 @@ struct SettingsScreen: View {
         }
     }
 
+    private var planNames: [String] {
+        let names = plans.map(\.name)
+        return names.isEmpty ? ["16:8"] : names
+    }
+
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
         return version ?? "1.0"
+    }
+
+    private var defaultPlanBinding: Binding<String> {
+        Binding(
+            get: { activeSettings?.defaultPlan?.name ?? "16:8" },
+            set: { newValue in
+                guard activeSettings != nil, let plan = plans.first(where: { $0.name == newValue }) else { return }
+                save("default fasting plan") { $0.defaultPlan = plan }
+            }
+        )
+    }
+
+    private var defaultStartTimeBinding: Binding<Date> {
+        Binding(
+            get: { date(minutesFromMidnight: activeSettings?.defaultStartTimeMinutesFromMidnight ?? UserSettings.defaultStartTimeMinutesFromMidnight) },
+            set: { newValue in
+                let minutes = Calendar.current.component(.hour, from: newValue) * 60 + Calendar.current.component(.minute, from: newValue)
+                save("default start time") { $0.defaultStartTimeMinutesFromMidnight = minutes }
+            }
+        )
+    }
+
+    private var fastingRemindersBinding: Binding<Bool> {
+        Binding(
+            get: { activeSettings?.fastingRemindersEnabled ?? true },
+            set: { newValue in
+                guard let settings = activeSettings else { return }
+                do {
+                    try service.setFastingRemindersEnabled(newValue, settings: settings)
+                    AppLogger.info("Set fasting reminders to \(newValue)", category: "Interaction")
+                } catch {
+                    present(error, context: "update fasting reminders")
+                }
+            }
+        )
+    }
+
+    private var fastCompletionAlertBinding: Binding<Bool> {
+        Binding(
+            get: { activeSettings?.fastCompletionAlertEnabled ?? true },
+            set: { newValue in
+                save("fast completion alert") { $0.fastCompletionAlertEnabled = newValue }
+            }
+        )
+    }
+
+    private var weightSyncBinding: Binding<Bool> {
+        Binding(
+            get: { activeSettings?.healthKitWeightEnabled ?? false },
+            set: { newValue in
+                Task { @MainActor in
+                    await setWeightSyncEnabled(newValue)
+                }
+            }
+        )
+    }
+
+    private var weightUnitBinding: Binding<String> {
+        Binding(
+            get: { activeSettings?.weightUnit.rawValue ?? WeightUnit.kg.rawValue },
+            set: { newValue in
+                save("weight unit") { $0.weightUnit = WeightUnit(rawValue: newValue) ?? .kg }
+            }
+        )
+    }
+
+    private var languageBinding: Binding<String> {
+        Binding(
+            get: { selectedLanguageRaw },
+            set: {
+                selectedLanguageRaw = AppLanguage(storageValue: $0).storageValue
+                AppLogger.info("Changed app language to \(selectedLanguageRaw)", category: "Interaction")
+            }
+        )
+    }
+
+    private var timeFormatBinding: Binding<String> {
+        Binding(
+            get: { activeSettings?.timeFormat.rawValue ?? TimeFormat.system.rawValue },
+            set: { newValue in
+                save("time format") { $0.timeFormat = TimeFormat(rawValue: newValue) ?? .system }
+            }
+        )
+    }
+
+    private func loadSettings() {
+        do {
+            let loaded = try service.fetchOrCreate()
+            settings = loaded
+        } catch {
+            present(error, context: "load settings")
+        }
+    }
+
+    private func save(_ label: String, changes: (UserSettings) -> Void) {
+        guard let settings = activeSettings else { return }
+        do {
+            try service.update(settings, changes: changes)
+            AppLogger.info("Updated \(label)", category: "Interaction")
+        } catch {
+            present(error, context: "update \(label)")
+        }
+    }
+
+    private func setWeightSyncEnabled(_ isEnabled: Bool) async {
+        guard activeSettings != nil else { return }
+        if isEnabled {
+            do {
+                try await HealthKitService().requestAuthorization()
+                save("weight sync") { $0.healthKitWeightEnabled = true }
+            } catch {
+                save("weight sync") { $0.healthKitWeightEnabled = false }
+                present(error, context: "authorize HealthKit weight sync")
+            }
+        } else {
+            save("weight sync") { $0.healthKitWeightEnabled = false }
+        }
+    }
+
+    private func resetFastingData() {
+        do {
+            try service.resetFastingDataPreservingPreferences()
+            AppLogger.warning("Reset fasting data from Settings", category: "Interaction")
+        } catch {
+            present(error, context: "reset fasting data")
+        }
+    }
+
+    private func present(_ error: Error, context: String) {
+        errorMessage = error.localizedDescription
+        AppLogger.error("Failed to \(context): \(error)", category: "Settings")
+    }
+
+    private func date(minutesFromMidnight: Int) -> Date {
+        var components = DateComponents()
+        components.hour = minutesFromMidnight / 60
+        components.minute = minutesFromMidnight % 60
+        return Calendar.current.date(from: components) ?? Date()
     }
 
     private func timeFormatTitle(_ value: String) -> String {
@@ -199,13 +361,6 @@ struct SettingsScreen: View {
 
     private func fastingPlanTitle(_ value: String) -> String {
         value == "OMAD" ? AppStrings.localized("settings_plan_omad") : value
-    }
-
-    private static var defaultStartTimeSeed: Date {
-        var components = DateComponents()
-        components.hour = 20
-        components.minute = 30
-        return Calendar.current.date(from: components) ?? Date()
     }
 }
 
@@ -270,29 +425,6 @@ private struct SettingsStaticRow: View {
             Spacer(minLength: 12)
             Text(value)
                 .settingsRowValue()
-        }
-        .settingsRowFrame()
-    }
-}
-
-private struct SettingsNavigationRow: View {
-    let icon: String
-    var iconColor = Color.lumeSage
-    var iconBackground = Color.lumeSage.opacity(0.14)
-    let title: String
-    let value: String
-
-    var body: some View {
-        HStack(spacing: 12) {
-            SettingsIcon(systemName: icon, color: iconColor, background: iconBackground)
-            Text(title)
-                .settingsRowTitle()
-            Spacer(minLength: 12)
-            Text(value)
-                .settingsRowValue()
-            Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Color.lumeMuted.opacity(0.7))
         }
         .settingsRowFrame()
     }
@@ -375,20 +507,32 @@ private struct SettingsActionRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
-                SettingsIcon(systemName: icon, color: iconColor, background: iconBackground)
-                Text(title)
-                    .settingsRowTitle(color: titleColor)
-                Spacer(minLength: 12)
-                if titleColor != Color.timerDestructive {
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Color.lumeMuted.opacity(0.7))
-                }
-            }
-            .settingsRowFrame()
+            SettingsActionRowContent(icon: icon, iconColor: iconColor, iconBackground: iconBackground, title: title, titleColor: titleColor)
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct SettingsActionRowContent: View {
+    let icon: String
+    var iconColor = Color.lumePrimary.opacity(0.72)
+    var iconBackground = Color.lumeSurfaceSoft
+    let title: String
+    var titleColor = Color.lumePrimary
+
+    var body: some View {
+        HStack(spacing: 12) {
+            SettingsIcon(systemName: icon, color: iconColor, background: iconBackground)
+            Text(title)
+                .settingsRowTitle(color: titleColor)
+            Spacer(minLength: 12)
+            if titleColor != Color.timerDestructive {
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.lumeMuted.opacity(0.7))
+            }
+        }
+        .settingsRowFrame()
     }
 }
 

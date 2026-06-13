@@ -10,6 +10,9 @@ struct TimerScreen: View {
     let streak: Int
     let latestWeight: WeightSample?
     let weightLoadFailed: Bool
+    let weightUnit: WeightUnit
+    let timeFormat: TimeFormat
+    let selectedLanguage: AppLanguage
     let isStartingFast: Bool
     let startFast: () -> Void
     let requestEnd: (FastingSession) -> Void
@@ -73,14 +76,21 @@ struct TimerScreen: View {
         let targetMinutes = activeSession?.targetFastingMinutes ?? defaultPlan?.fastingMinutes ?? 960
         let startedAt = activeSession?.startedAt ?? now
         let timerNow = activeSession.map { TimerTestingClock.now(for: $0, realNow: now) } ?? now
-        return TimerMetrics(startedAt: startedAt, targetMinutes: targetMinutes, now: timerNow, isActive: activeSession != nil)
+        return TimerMetrics(
+            startedAt: startedAt,
+            targetMinutes: targetMinutes,
+            now: timerNow,
+            isActive: activeSession != nil,
+            timeFormat: timeFormat,
+            language: selectedLanguage
+        )
     }
 
     private var weightText: String {
         guard let latestWeight else {
             return weightLoadFailed ? AppStrings.appleHealthUnavailable : AppStrings.noAppleHealthReading
         }
-        return "\(latestWeight.value.formatted(.number.precision(.fractionLength(1)))) \(latestWeight.unit.rawValue)"
+        return WeightFormatter.displayText(for: latestWeight, unit: weightUnit)
     }
 
     private func timelineHeight(for screenHeight: CGFloat) -> CGFloat {
@@ -668,6 +678,8 @@ struct TimerMetrics {
     let targetMinutes: Int
     let now: Date
     let isActive: Bool
+    let timeFormat: TimeFormat
+    let language: AppLanguage
 
     var elapsedSeconds: TimeInterval {
         guard isActive else { return 0 }
@@ -699,7 +711,7 @@ struct TimerMetrics {
     }
 
     var percentText: String {
-        progress.formatted(.percent.precision(.fractionLength(0)))
+        progress.formatted(.percent.precision(.fractionLength(0)).locale(language.locale))
     }
 
     var targetHoursText: String {
@@ -713,42 +725,42 @@ struct TimerMetrics {
 
     var startedText: String {
         guard isActive else { return AppStrings.notStarted }
-        return AppStrings.timeRelativeDay(time: startedAt.formatted(date: .omitted, time: .shortened), day: startedAt.relativeDayText)
+        return AppStrings.timeRelativeDay(time: timeString(startedAt), day: startedAt.relativeDayText(locale: language.locale))
     }
 
     var startedTimelineText: String {
         guard isActive else { return AppStrings.notStarted }
-        return AppStrings.compactTimeRelativeDay(time: startedAt.formatted(date: .omitted, time: .shortened), day: startedAt.relativeDayText)
+        return AppStrings.compactTimeRelativeDay(time: timeString(startedAt), day: startedAt.relativeDayText(locale: language.locale))
     }
 
     var startedClockText: String {
         guard isActive else { return "--:--" }
-        return startedAt.formatted(date: .omitted, time: .shortened)
+        return timeString(startedAt)
     }
 
     var startedDayText: String {
         guard isActive else { return AppStrings.notStarted }
-        return startedAt.relativeDayText
+        return startedAt.relativeDayText(locale: language.locale)
     }
 
     var currentTimelineText: String {
-        AppStrings.compactTimeRelativeDay(time: now.formatted(date: .omitted, time: .shortened), day: now.relativeDayText)
+        AppStrings.compactTimeRelativeDay(time: timeString(now), day: now.relativeDayText(locale: language.locale))
     }
 
     var eatingOpensText: String {
-        AppStrings.timeRelativeDay(time: eatingOpensAt.formatted(date: .omitted, time: .shortened), day: eatingOpensAt.relativeDayText)
+        AppStrings.timeRelativeDay(time: timeString(eatingOpensAt), day: eatingOpensAt.relativeDayText(locale: language.locale))
     }
 
     var eatingTimelineText: String {
-        AppStrings.compactTimeRelativeDay(time: eatingOpensAt.formatted(date: .omitted, time: .shortened), day: eatingOpensAt.relativeDayText)
+        AppStrings.compactTimeRelativeDay(time: timeString(eatingOpensAt), day: eatingOpensAt.relativeDayText(locale: language.locale))
     }
 
     var eatingClockText: String {
-        eatingOpensAt.formatted(date: .omitted, time: .shortened)
+        timeString(eatingOpensAt)
     }
 
     var eatingDayText: String {
-        eatingOpensAt.relativeDayText
+        eatingOpensAt.relativeDayText(locale: language.locale)
     }
 
     private func formatClockDuration(_ seconds: TimeInterval) -> String {
@@ -757,6 +769,10 @@ struct TimerMetrics {
         let minutes = (totalSeconds % 3_600) / 60
         let seconds = totalSeconds % 60
         return "\(String(format: "%02d", hours)):\(String(format: "%02d", minutes)):\(String(format: "%02d", seconds))"
+    }
+
+    private func timeString(_ date: Date) -> String {
+        AppTimeFormatter.timeString(from: date, timeFormat: timeFormat, locale: language.locale)
     }
 
     private func formatDuration(_ seconds: TimeInterval) -> String {
@@ -816,6 +832,10 @@ enum TimerConfirmation: Identifiable {
 
 extension Date {
     var relativeDayText: String {
+        relativeDayText(locale: .current)
+    }
+
+    func relativeDayText(locale: Locale) -> String {
         let calendar = Calendar.current
         if calendar.isDateInToday(self) {
             return AppStrings.localized("today_label")
@@ -826,10 +846,14 @@ extension Date {
         if calendar.isDateInTomorrow(self) {
             return AppStrings.localized("tomorrow_label")
         }
-        return formatted(.dateTime.month(.abbreviated).day())
+        return formatted(.dateTime.month(.abbreviated).day().locale(locale))
     }
 
     var relativeDayPartText: String {
+        relativeDayPartText(locale: .current)
+    }
+
+    func relativeDayPartText(locale: Locale) -> String {
         let hour = Calendar.current.component(.hour, from: self)
         let part: String
         switch hour {
@@ -842,6 +866,6 @@ extension Date {
         default:
             part = AppStrings.localized("today_label")
         }
-        return Calendar.current.isDateInToday(self) ? part : relativeDayText
+        return Calendar.current.isDateInToday(self) ? part : relativeDayText(locale: locale)
     }
 }

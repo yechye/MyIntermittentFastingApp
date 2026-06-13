@@ -8,6 +8,7 @@ struct ScheduleScreen: View {
     @Query(sort: \FastingPlan.name) private var plans: [FastingPlan]
     @Query(sort: \FastingSession.startedAt, order: .reverse) private var sessions: [FastingSession]
     @Query(sort: \WeeklySchedule.weekday) private var schedules: [WeeklySchedule]
+    @Query(sort: \UserSettings.createdAt) private var settingsRows: [UserSettings]
     @State private var selectedDay: ScheduleDayDraft?
     @State private var isEditingSchedule = false
     @State private var showingTemplates = false
@@ -19,7 +20,7 @@ struct ScheduleScreen: View {
             if let schedule = schedules.first(where: { $0.weekday == weekday }) {
                 return ScheduleDayDraft(schedule: schedule)
             }
-            return ScheduleDayDraft.defaultDay(weekday: weekday, plan: defaultPlan)
+            return ScheduleDayDraft.defaultDay(weekday: weekday, plan: defaultPlan, startTimeMinutes: defaultStartTimeMinutes)
         }
     }
 
@@ -29,7 +30,19 @@ struct ScheduleScreen: View {
     }
 
     private var defaultPlan: FastingPlan? {
-        plans.first { $0.name == "16:8" } ?? plans.first
+        userSettings?.defaultPlan ?? plans.first { $0.name == "16:8" } ?? plans.first
+    }
+
+    private var defaultStartTimeMinutes: Int {
+        userSettings?.defaultStartTimeMinutesFromMidnight ?? UserSettings.defaultStartTimeMinutesFromMidnight
+    }
+
+    private var timeFormat: TimeFormat {
+        userSettings?.timeFormat ?? .system
+    }
+
+    private var userSettings: UserSettings? {
+        settingsRows.first
     }
 
     private var nextFastingDay: ScheduleDayDraft? {
@@ -219,11 +232,11 @@ struct ScheduleScreen: View {
         components.hour = minutes / 60
         components.minute = minutes % 60
         let date = calendar.date(from: components) ?? Date()
-        return date.formatted(date: .omitted, time: .shortened)
+            return AppTimeFormatter.timeString(from: date, timeFormat: timeFormat, locale: locale)
     }
 
     private func dateTimeText(_ date: Date) -> String {
-        date.formatted(date: .omitted, time: .shortened)
+        AppTimeFormatter.timeString(from: date, timeFormat: timeFormat, locale: locale)
     }
 
     private func completedFastSummary(for weekday: Int) -> CompletedFastSummary? {
@@ -302,7 +315,7 @@ struct ScheduleScreen: View {
             if existing == nil {
                 modelContext.insert(row)
             }
-            apply(template.draft(for: weekday, plan: plan(named: template.planName) ?? defaultPlan), to: row)
+            apply(template.draft(for: weekday, plan: plan(named: template.planName) ?? defaultPlan, startTimeMinutes: defaultStartTimeMinutes), to: row)
         }
         persist("Applied schedule template \(template.id)")
     }
@@ -498,12 +511,12 @@ private struct ScheduleDayDraft: Identifiable {
         )
     }
 
-    static func defaultDay(weekday: Int, plan: FastingPlan?) -> ScheduleDayDraft {
+    static func defaultDay(weekday: Int, plan: FastingPlan?, startTimeMinutes: Int) -> ScheduleDayDraft {
         ScheduleDayDraft(
             weekday: weekday,
             state: .normal,
             plan: plan,
-            startTimeMinutes: 20 * 60,
+            startTimeMinutes: startTimeMinutes,
             reminderEnabled: true,
             restrictedCalorieGuidance: nil
         )
@@ -547,14 +560,14 @@ private enum ScheduleTemplate: String, CaseIterable, Identifiable {
         self == .beginner16_8
     }
 
-    func draft(for weekday: Int, plan: FastingPlan?) -> ScheduleDayDraft {
+    func draft(for weekday: Int, plan: FastingPlan?, startTimeMinutes: Int) -> ScheduleDayDraft {
         switch self {
         case .beginner16_8, .gentle14_10, .advanced18_6, .intensive20_4:
             return ScheduleDayDraft(
                 weekday: weekday,
                 state: .fasting,
                 plan: plan,
-                startTimeMinutes: 20 * 60,
+                startTimeMinutes: startTimeMinutes,
                 reminderEnabled: true,
                 restrictedCalorieGuidance: nil,
                 templateIdentifier: id
@@ -582,7 +595,7 @@ private enum ScheduleTemplate: String, CaseIterable, Identifiable {
                 templateIdentifier: id
             )
         case .custom:
-            return ScheduleDayDraft.defaultDay(weekday: weekday, plan: plan)
+            return ScheduleDayDraft.defaultDay(weekday: weekday, plan: plan, startTimeMinutes: startTimeMinutes)
         }
     }
 }
