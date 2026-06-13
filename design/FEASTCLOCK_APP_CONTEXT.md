@@ -158,6 +158,7 @@ Settings implementation:
 - Root-level app preferences remain in `UserDefaults`: theme, in-app language, and minimum log level.
 - In-app language supports System, English, and Hebrew. Hebrew applies right-to-left layout direction and uses the Hebrew `.lproj` bundle.
 - The previous separate Eating Window Alert setting was removed; Fast Completion Alert covers the target-reached/eating-window-open notification.
+- Local notifications are permission-aware and settings-driven: fasting reminders ask for permission when enabled or scheduled, fast completion alerts ask when needed for active/new fasts, denied reminder permission restores the reminder setting to off, and notification copy is positive and localized in English and Hebrew.
 - Time format and weight unit settings are applied beyond Settings: Timer, Schedule, History rows, and fasting-history CSV export use shared formatting helpers.
 - Reset App Data clears fasting sessions, weekly schedules, and cheat days while preserving preferences, plans, theme, language, HealthKit choice, and log level.
 
@@ -207,6 +208,7 @@ Logging/debugging implementation:
 - Verified targeted fasting session lifecycle tests after adding missed-fast entry.
 - Added targeted UI coverage for adding a missed fast from History and deleting a saved history fast.
 - Rebuilt Settings as a production SwiftData-backed page, removed the redundant eating-window alert, added in-app language selection, wired global time/weight/default-plan/default-start/notification/reset behavior, and added targeted settings tests.
+- Implemented permission-aware local notifications with localized positive reminder/completion copy, foreground presentation, active-fast completion rescheduling from Settings, and reminder rescheduling from schedule edits.
 
 ## Verification Status
 
@@ -216,7 +218,21 @@ Most recent build verification:
 xcodebuild -project FastingApp.xcodeproj -scheme FastingApp -destination 'generic/platform=iOS Simulator' build
 ```
 
-Result: succeeded after the Settings production implementation.
+Result: succeeded without warning output after the local notifications implementation.
+
+Most recent local notifications verification:
+
+```sh
+xcodebuild test -project FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:FastingAppTests/NotificationTests -only-testing:FastingAppTests/UserSettingsTests -only-testing:FastingAppTests/FastingSessionTests -only-testing:FastingAppTests/WeeklyScheduleTests
+```
+
+Result: succeeded without warning output, 47 targeted notification, settings, fasting session, and weekly schedule tests passed.
+
+```sh
+xcodebuild -project FastingApp.xcodeproj -scheme FastingApp -destination 'generic/platform=iOS Simulator' build
+```
+
+Result: succeeded without warning output after the local notifications implementation.
 
 Most recent Settings verification:
 

@@ -118,6 +118,11 @@
 "schedule_template_message" = "This updates the weekly schedule preview and saves it for timer expectations.";
 "schedule_current_plan_label" = "Current plan";
 "schedule_build_rhythm_title" = "Build your weekly rhythm";
+"notification_fast_complete_title" = "Your fasting window is complete";
+"notification_fast_complete_body" = "Nice work. Your %@ fast is complete, and your eating window is open when you are ready.";
+"notification_reminder_title" = "A gentle fasting reminder";
+"notification_reminder_body" = "Your %@ fast is scheduled for today. Start when it feels right.";
+"notification_scheduled_plan" = "scheduled";
 "schedule_choose_template_summary" = "Choose a template or customize days one by one.";
 "schedule_intermittent_plan_text" = "%@ Intermittent Fasting";
 "schedule_next_start_text" = "Next start: %@ at %@";

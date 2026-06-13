@@ -1,33 +1,98 @@
 import Foundation
 import UserNotifications
 
-final class NotificationService: NotificationServiceProtocol {
-    private let centerProvider: () -> UNUserNotificationCenter?
+nonisolated protocol NotificationCenterClient: AnyObject {
+    var delegate: UNUserNotificationCenterDelegate? { get set }
+    func authorizationStatus() async -> UNAuthorizationStatus
+    func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool
+    func add(_ request: UNNotificationRequest) async throws
+    func removePendingNotificationRequests(withIdentifiers identifiers: [String])
+}
 
-    init(centerProvider: @escaping () -> UNUserNotificationCenter? = NotificationService.defaultCenter) {
+nonisolated final class SystemNotificationCenterClient: NotificationCenterClient {
+    private let center: UNUserNotificationCenter
+
+    init(center: UNUserNotificationCenter = .current()) {
+        self.center = center
+    }
+
+    var delegate: UNUserNotificationCenterDelegate? {
+        get { center.delegate }
+        set { center.delegate = newValue }
+    }
+
+    func authorizationStatus() async -> UNAuthorizationStatus {
+        await center.notificationSettings().authorizationStatus
+    }
+
+    func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool {
+        try await center.requestAuthorization(options: options)
+    }
+
+    func add(_ request: UNNotificationRequest) async throws {
+        try await center.add(request)
+    }
+
+    func removePendingNotificationRequests(withIdentifiers identifiers: [String]) {
+        center.removePendingNotificationRequests(withIdentifiers: identifiers)
+    }
+}
+
+final class NotificationService: NotificationServiceProtocol {
+    private static let foregroundPresenter = NotificationForegroundPresenter()
+    private let centerProvider: () -> NotificationCenterClient?
+
+    init(centerProvider: @escaping () -> NotificationCenterClient? = NotificationService.defaultCenter) {
         self.centerProvider = centerProvider
+        centerProvider()?.delegate = Self.foregroundPresenter
+    }
+
+    func requestAuthorizationIfNeeded() async -> Bool {
+        guard let center = centerProvider() else {
+            AppLogger.debug("Skipping notification authorization because notification center is unavailable", category: "Notifications")
+            return false
+        }
+        center.delegate = Self.foregroundPresenter
+
+        switch await center.authorizationStatus() {
+        case .authorized, .provisional, .ephemeral:
+            return true
+        case .denied:
+            AppLogger.warning("Notification authorization is denied", category: "Notifications")
+            return false
+        case .notDetermined:
+            do {
+                let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
+                if granted {
+                    AppLogger.info("Notification authorization granted", category: "Notifications")
+                } else {
+                    AppLogger.warning("Notification authorization was not granted", category: "Notifications")
+                }
+                return granted
+            } catch {
+                AppLogger.error("Failed to request notification authorization: \(error)", category: "Notifications")
+                return false
+            }
+        @unknown default:
+            AppLogger.warning("Unknown notification authorization status", category: "Notifications")
+            return false
+        }
     }
 
     func scheduleFastEndNotification(for session: FastingSession, elapsedMinutes: Int) {
-        guard let center = centerProvider() else {
+        guard centerProvider() != nil else {
             AppLogger.debug("Skipping fast end notification because notification center is unavailable", category: "Notifications")
             return
         }
-        let remainingSeconds = max(1, (session.targetFastingMinutes - elapsedMinutes) * 60)
-        let content = UNMutableNotificationContent()
-        content.title = "Your fast is complete!"
-        content.body = "You've completed your \(session.planName ?? "scheduled") fast."
-        content.sound = .default
 
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(remainingSeconds), repeats: false)
-        let request = UNNotificationRequest(identifier: fastEndIdentifier(for: session), content: content, trigger: trigger)
+        let remainingSeconds = max(1, (session.targetFastingMinutes - elapsedMinutes) * 60)
+        let request = fastEndRequest(for: session, remainingSeconds: remainingSeconds)
         Task {
-            do {
-                try await center.add(request)
-                AppLogger.info("Scheduled fast end notification for session \(session.id)", category: "Notifications")
-            } catch {
-                AppLogger.error("Failed to schedule fast end notification for session \(session.id): \(error)", category: "Notifications")
+            guard await requestAuthorizationIfNeeded() else {
+                AppLogger.warning("Skipped fast end notification because authorization is unavailable", category: "Notifications")
+                return
             }
+            await add(request, successMessage: "Scheduled fast end notification for session \(session.id)", failureMessage: "Failed to schedule fast end notification for session \(session.id)")
         }
     }
 
@@ -42,7 +107,7 @@ final class NotificationService: NotificationServiceProtocol {
 
     func rescheduleReminder(for schedule: WeeklySchedule, notificationsEnabled: Bool) {
         cancelReminder(weekday: schedule.weekday)
-        guard let center = centerProvider() else {
+        guard centerProvider() != nil else {
             AppLogger.debug("Skipping reminder schedule because notification center is unavailable", category: "Notifications")
             return
         }
@@ -55,25 +120,13 @@ final class NotificationService: NotificationServiceProtocol {
             return
         }
 
-        let content = UNMutableNotificationContent()
-        content.title = "Time to start your fast"
-        content.body = "Your \(schedule.plan?.name ?? "scheduled") fast is scheduled for today."
-        content.sound = .default
-
-        var components = DateComponents()
-        components.weekday = schedule.weekday
-        components.hour = startTime / 60
-        components.minute = startTime % 60
-
-        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
-        let request = UNNotificationRequest(identifier: reminderIdentifier(weekday: schedule.weekday), content: content, trigger: trigger)
+        let request = reminderRequest(for: schedule, startTime: startTime)
         Task {
-            do {
-                try await center.add(request)
-                AppLogger.info("Scheduled reminder for weekday \(schedule.weekday)", category: "Notifications")
-            } catch {
-                AppLogger.error("Failed to schedule reminder for weekday \(schedule.weekday): \(error)", category: "Notifications")
+            guard await requestAuthorizationIfNeeded() else {
+                AppLogger.warning("Skipped reminder for weekday \(schedule.weekday) because authorization is unavailable", category: "Notifications")
+                return
             }
+            await add(request, successMessage: "Scheduled reminder for weekday \(schedule.weekday)", failureMessage: "Failed to schedule reminder for weekday \(schedule.weekday)")
         }
     }
 
@@ -96,11 +149,49 @@ final class NotificationService: NotificationServiceProtocol {
         AppLogger.debug("Cancelled all reminders", category: "Notifications")
     }
 
-    private static func defaultCenter() -> UNUserNotificationCenter? {
+    nonisolated private static func defaultCenter() -> NotificationCenterClient? {
         guard Bundle.main.bundleIdentifier != nil,
               Bundle.main.bundleURL.pathExtension == "app"
         else { return nil }
-        return .current()
+        return SystemNotificationCenterClient()
+    }
+
+    private func add(_ request: UNNotificationRequest, successMessage: String, failureMessage: String) async {
+        guard let center = centerProvider() else {
+            AppLogger.debug("Skipping notification add because notification center is unavailable", category: "Notifications")
+            return
+        }
+        do {
+            try await center.add(request)
+            AppLogger.info(successMessage, category: "Notifications")
+        } catch {
+            AppLogger.error("\(failureMessage): \(error)", category: "Notifications")
+        }
+    }
+
+    private func fastEndRequest(for session: FastingSession, remainingSeconds: Int) -> UNNotificationRequest {
+        let content = UNMutableNotificationContent()
+        content.title = AppStrings.notificationFastCompleteTitle
+        content.body = AppStrings.notificationFastCompleteBody(session.planName ?? AppStrings.notificationScheduledPlan)
+        content.sound = .default
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(remainingSeconds), repeats: false)
+        return UNNotificationRequest(identifier: fastEndIdentifier(for: session), content: content, trigger: trigger)
+    }
+
+    private func reminderRequest(for schedule: WeeklySchedule, startTime: Int) -> UNNotificationRequest {
+        let content = UNMutableNotificationContent()
+        content.title = AppStrings.notificationReminderTitle
+        content.body = AppStrings.notificationReminderBody(schedule.plan?.name ?? AppStrings.notificationScheduledPlan)
+        content.sound = .default
+
+        var components = DateComponents()
+        components.weekday = schedule.weekday
+        components.hour = startTime / 60
+        components.minute = startTime % 60
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+        return UNNotificationRequest(identifier: reminderIdentifier(weekday: schedule.weekday), content: content, trigger: trigger)
     }
 
     private func fastEndIdentifier(for session: FastingSession) -> String {
@@ -109,5 +200,14 @@ final class NotificationService: NotificationServiceProtocol {
 
     private func reminderIdentifier(weekday: Int) -> String {
         "reminder-weekday-\(weekday)"
+    }
+}
+
+private final class NotificationForegroundPresenter: NSObject, UNUserNotificationCenterDelegate {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        [.banner, .list, .sound]
     }
 }

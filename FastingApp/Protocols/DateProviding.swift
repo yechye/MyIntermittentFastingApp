@@ -1,9 +1,9 @@
 import Foundation
 
-protocol DateProviding {
+nonisolated protocol DateProviding {
     var now: Date { get }
 }
 
-struct SystemDateProvider: DateProviding {
+nonisolated struct SystemDateProvider: DateProviding {
     var now: Date { Date() }
 }

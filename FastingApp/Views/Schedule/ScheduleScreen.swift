@@ -274,7 +274,7 @@ struct ScheduleScreen: View {
             modelContext.insert(row)
         }
         apply(draft, to: row)
-        persist("Saved schedule day \(draft.weekday)")
+        persist("Saved schedule day \(draft.weekday)", reschedule: [row])
         if shouldAskToApplyStartTimeToOtherDays(draft: draft, previousStartTime: previousStartTime) {
             pendingStartTimePropagation = PendingStartTimePropagation(
                 sourceWeekday: draft.weekday,
@@ -297,10 +297,11 @@ struct ScheduleScreen: View {
             schedule.startTimeMinutesFromMidnight = propagation.startTimeMinutes
             schedule.updatedAt = Date()
         }
-        persist("Applied fasting start time to other fasting days")
+        persist("Applied fasting start time to other fasting days", reschedule: schedules.filter { $0.weekday != propagation.sourceWeekday && $0.isFastingDay })
     }
 
     private func applyTemplate(_ template: ScheduleTemplate) {
+        var rowsToReschedule: [WeeklySchedule] = []
         for weekday in orderedWeekdays {
             let existing = schedules.first { $0.weekday == weekday }
             let row = existing ?? WeeklySchedule(
@@ -316,8 +317,9 @@ struct ScheduleScreen: View {
                 modelContext.insert(row)
             }
             apply(template.draft(for: weekday, plan: plan(named: template.planName) ?? defaultPlan, startTimeMinutes: defaultStartTimeMinutes), to: row)
+            rowsToReschedule.append(row)
         }
-        persist("Applied schedule template \(template.id)")
+        persist("Applied schedule template \(template.id)", reschedule: rowsToReschedule)
     }
 
     private func apply(_ draft: ScheduleDayDraft, to row: WeeklySchedule) {
@@ -333,9 +335,14 @@ struct ScheduleScreen: View {
         row.updatedAt = Date()
     }
 
-    private func persist(_ message: String) {
+    private func persist(_ message: String, reschedule rows: [WeeklySchedule] = []) {
         do {
             try modelContext.save()
+            let notificationService = NotificationService()
+            let notificationsEnabled = userSettings?.fastingRemindersEnabled ?? true
+            for row in rows {
+                notificationService.rescheduleReminder(for: row, notificationsEnabled: notificationsEnabled)
+            }
             AppLogger.info(message, category: "Schedule")
         } catch {
             AppLogger.error("Failed to save schedule: \(error)", category: "Schedule")

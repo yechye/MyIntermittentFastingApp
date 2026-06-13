@@ -118,6 +118,11 @@
 "schedule_template_message" = "הפעולה תעדכן את תצוגת לוח הזמנים השבועי ותשמור אותה לציפיות הטיימר.";
 "schedule_current_plan_label" = "תוכנית נוכחית";
 "schedule_build_rhythm_title" = "בנו את הקצב השבועי שלכם";
+"notification_fast_complete_title" = "חלון הצום שלך הושלם";
+"notification_fast_complete_body" = "עבודה יפה. צום %@ שלך הושלם, וחלון האכילה פתוח כשתרצו.";
+"notification_reminder_title" = "תזכורת צום עדינה";
+"notification_reminder_body" = "צום %@ שלך מתוכנן להיום. התחילו כשזה מרגיש נכון.";
+"notification_scheduled_plan" = "מתוכנן";
 "schedule_choose_template_summary" = "בחרו תבנית או התאימו כל יום בנפרד.";
 "schedule_intermittent_plan_text" = "צום לסירוגין %@";
 "schedule_next_start_text" = "ההתחלה הבאה: %@ בשעה %@";

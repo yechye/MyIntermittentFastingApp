@@ -51,12 +51,35 @@ final class UserSettingsService {
         cachedSettings = settings
     }
 
-    func setFastingRemindersEnabled(_ isEnabled: Bool, settings: UserSettings) throws {
-        try update(settings) { $0.fastingRemindersEnabled = isEnabled }
+    @MainActor
+    func setFastingRemindersEnabled(_ isEnabled: Bool, settings: UserSettings) async throws {
         if isEnabled {
+            guard await notificationsAreAllowed() else {
+                try update(settings) { $0.fastingRemindersEnabled = false }
+                notificationService?.cancelAllReminders()
+                return
+            }
+            try update(settings) { $0.fastingRemindersEnabled = true }
             try rescheduleAllReminders()
         } else {
+            try update(settings) { $0.fastingRemindersEnabled = false }
             notificationService?.cancelAllReminders()
+        }
+    }
+
+    @MainActor
+    func setFastCompletionAlertEnabled(_ isEnabled: Bool, settings: UserSettings) async throws {
+        if isEnabled {
+            guard await notificationsAreAllowed() else {
+                try update(settings) { $0.fastCompletionAlertEnabled = false }
+                cancelActiveFastEndNotifications()
+                return
+            }
+            try update(settings) { $0.fastCompletionAlertEnabled = true }
+            scheduleActiveFastEndNotifications()
+        } else {
+            try update(settings) { $0.fastCompletionAlertEnabled = false }
+            cancelActiveFastEndNotifications()
         }
     }
 
@@ -89,5 +112,33 @@ final class UserSettingsService {
 
     var fastCompletionAlertEnabled: Bool {
         cachedSettings?.fastCompletionAlertEnabled ?? true
+    }
+
+    private func notificationsAreAllowed() async -> Bool {
+        guard let notificationService else { return true }
+        return await notificationService.requestAuthorizationIfNeeded()
+    }
+
+    private func activeSessions() -> [FastingSession] {
+        do {
+            return try context.fetch(FetchDescriptor<FastingSession>())
+                .filter { $0.status == .active && $0.deletedAt == nil }
+        } catch {
+            AppLogger.error("Failed to fetch active sessions for notification settings: \(error)", category: "Notifications")
+            return []
+        }
+    }
+
+    private func scheduleActiveFastEndNotifications() {
+        for session in activeSessions() {
+            let elapsedMinutes = max(0, Int(dateProvider.now.timeIntervalSince(session.startedAt) / 60))
+            notificationService?.scheduleFastEndNotification(for: session, elapsedMinutes: elapsedMinutes)
+        }
+    }
+
+    private func cancelActiveFastEndNotifications() {
+        for session in activeSessions() {
+            notificationService?.cancelFastEndNotification(for: session)
+        }
     }
 }

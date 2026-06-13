@@ -148,6 +148,9 @@ enum AppStrings {
     static var scheduleChoosePlanStart = localized("schedule_choose_plan_start")
     static var scheduleCompletedFast = localized("schedule_completed_fast_label")
     static var scheduleFastOnTarget = localized("schedule_fast_on_target_label")
+    static var notificationFastCompleteTitle: String { localized("notification_fast_complete_title") }
+    static var notificationReminderTitle: String { localized("notification_reminder_title") }
+    static var notificationScheduledPlan: String { localized("notification_scheduled_plan") }
     static var historyTitle = localized("history_title")
 
     static func localized(_ key: String) -> String {
@@ -269,6 +272,14 @@ enum AppStrings {
 
     static func scheduleTemplateSubtitle(_ id: String) -> String {
         localized("schedule_template_\(id)_subtitle")
+    }
+
+    static func notificationFastCompleteBody(_ planName: String) -> String {
+        format("notification_fast_complete_body", planName)
+    }
+
+    static func notificationReminderBody(_ planName: String) -> String {
+        format("notification_reminder_body", planName)
     }
 
     private static func format(_ key: String, _ arguments: CVarArg...) -> String {

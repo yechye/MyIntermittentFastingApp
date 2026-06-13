@@ -235,11 +235,13 @@ struct SettingsScreen: View {
             get: { activeSettings?.fastingRemindersEnabled ?? true },
             set: { newValue in
                 guard let settings = activeSettings else { return }
-                do {
-                    try service.setFastingRemindersEnabled(newValue, settings: settings)
-                    AppLogger.info("Set fasting reminders to \(newValue)", category: "Interaction")
-                } catch {
-                    present(error, context: "update fasting reminders")
+                Task { @MainActor in
+                    do {
+                        try await service.setFastingRemindersEnabled(newValue, settings: settings)
+                        AppLogger.info("Set fasting reminders to \(settings.fastingRemindersEnabled)", category: "Interaction")
+                    } catch {
+                        present(error, context: "update fasting reminders")
+                    }
                 }
             }
         )
@@ -249,7 +251,15 @@ struct SettingsScreen: View {
         Binding(
             get: { activeSettings?.fastCompletionAlertEnabled ?? true },
             set: { newValue in
-                save("fast completion alert") { $0.fastCompletionAlertEnabled = newValue }
+                guard let settings = activeSettings else { return }
+                Task { @MainActor in
+                    do {
+                        try await service.setFastCompletionAlertEnabled(newValue, settings: settings)
+                        AppLogger.info("Set fast completion alert to \(settings.fastCompletionAlertEnabled)", category: "Interaction")
+                    } catch {
+                        present(error, context: "update fast completion alert")
+                    }
+                }
             }
         )
     }
