@@ -15,17 +15,9 @@ struct FastingAppApp: App {
     private let container: ModelContainer
 
     init() {
-        let schema = Schema([
-            FastingPlan.self,
-            FastingSession.self,
-            WeeklySchedule.self,
-            CheatDay.self,
-            UserSettings.self
-        ])
         do {
             let useInMemoryStore = ProcessInfo.processInfo.arguments.contains("-useInMemoryStoreForUITests")
-            let configuration = ModelConfiguration(isStoredInMemoryOnly: useInMemoryStore)
-            container = try ModelContainer(for: schema, configurations: [configuration])
+            container = try FeastClockModelContainer.make(isStoredInMemoryOnly: useInMemoryStore)
             AppLogger.info("Created SwiftData model container", category: "Lifecycle")
         } catch {
             AppLogger.error("Failed to create SwiftData container: \(error)", category: "Lifecycle")

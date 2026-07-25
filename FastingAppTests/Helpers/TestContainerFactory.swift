@@ -4,15 +4,7 @@ import XCTest
 
 @MainActor
 func makeInMemoryContainer() throws -> ModelContainer {
-    let schema = Schema([
-        FastingPlan.self,
-        FastingSession.self,
-        WeeklySchedule.self,
-        CheatDay.self,
-        UserSettings.self
-    ])
-    let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-    return try ModelContainer(for: schema, configurations: [configuration])
+    try FeastClockModelContainer.make(isStoredInMemoryOnly: true)
 }
 
 @MainActor

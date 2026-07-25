@@ -123,6 +123,16 @@
 "notification_reminder_title" = "A gentle fasting reminder";
 "notification_reminder_body" = "Your %@ fast is scheduled for today. Start when it feels right.";
 "notification_scheduled_plan" = "scheduled";
+"intent_start_fast_title" = "Start Fast";
+"intent_start_fast_short_title" = "Start Fast";
+"intent_start_fast_description" = "Start a fasting timer using your default FeastClock plan.";
+"intent_start_fast_success" = "Your fast is started.";
+"intent_start_fast_already_active" = "You already have an active fast.";
+"intent_end_fast_title" = "End Fast";
+"intent_end_fast_short_title" = "End Fast";
+"intent_end_fast_description" = "End the active FeastClock fast and save it to your history.";
+"intent_end_fast_success" = "Your fast is saved.";
+"intent_end_fast_no_active_fast" = "There is no active fast to end.";
 "schedule_choose_template_summary" = "Choose a template or customize days one by one.";
 "schedule_intermittent_plan_text" = "%@ Intermittent Fasting";
 "schedule_next_start_text" = "Next start: %@ at %@";
@@ -209,6 +219,9 @@
 "history_delete_fast_title" = "Delete this fast?";
 "history_delete_fast_message" = "This removes the fast from history and progress stats. It will not affect your current timer.";
 "history_delete_fast_button" = "Delete Fast";
+"history_edit_fast_title" = "Edit Fast";
+"history_edit_fast_button" = "Edit Fast";
+"history_edit_fast_help" = "Adjust the start and end time for this saved fast. Times cannot overlap another saved or active fast.";
 "history_add_fast_title" = "Add Missed Fast";
 "history_add_fast_start_label" = "Started";
 "history_add_fast_end_label" = "Ended";

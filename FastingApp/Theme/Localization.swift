@@ -152,6 +152,16 @@ enum AppStrings {
     static var notificationReminderTitle: String { localized("notification_reminder_title") }
     static var notificationScheduledPlan: String { localized("notification_scheduled_plan") }
     static var historyTitle = localized("history_title")
+    static var intentStartFastTitle: String { localized("intent_start_fast_title") }
+    static var intentStartFastShortTitle: String { localized("intent_start_fast_short_title") }
+    static var intentStartFastDescription: String { localized("intent_start_fast_description") }
+    static var intentStartFastSuccess: String { localized("intent_start_fast_success") }
+    static var intentStartFastAlreadyActive: String { localized("intent_start_fast_already_active") }
+    static var intentEndFastTitle: String { localized("intent_end_fast_title") }
+    static var intentEndFastShortTitle: String { localized("intent_end_fast_short_title") }
+    static var intentEndFastDescription: String { localized("intent_end_fast_description") }
+    static var intentEndFastSuccess: String { localized("intent_end_fast_success") }
+    static var intentEndFastNoActiveFast: String { localized("intent_end_fast_no_active_fast") }
 
     static func localized(_ key: String) -> String {
         let language = AppLanguage(storageValue: UserDefaults.standard.string(forKey: AppLanguage.storageKey) ?? AppLanguage.system.storageValue)

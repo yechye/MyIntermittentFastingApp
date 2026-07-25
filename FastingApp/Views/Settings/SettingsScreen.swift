@@ -537,9 +537,10 @@ private struct SettingsActionRowContent: View {
                 .settingsRowTitle(color: titleColor)
             Spacer(minLength: 12)
             if titleColor != Color.timerDestructive {
-                Image(systemName: "chevron.right")
+                Image(systemName: "chevron.forward")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Color.lumeMuted.opacity(0.7))
+                    .accessibilityHidden(true)
             }
         }
         .settingsRowFrame()

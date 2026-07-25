@@ -40,6 +40,7 @@ final class FastingSessionService: FastingSessionServiceProtocol {
         if fastCompletionAlertEnabled() {
             notificationService.scheduleFastEndNotification(for: session, elapsedMinutes: 0)
         }
+        cancelReminderForFastStart(on: date)
         return session
     }
 
@@ -84,6 +85,7 @@ final class FastingSessionService: FastingSessionServiceProtocol {
         session.updatedAt = dateProvider.now
         try context.save()
         notificationService.cancelFastEndNotification(for: session)
+        rescheduleReminderForFastStart(on: session.startedAt)
     }
 
     func discardFast(session: FastingSession) throws {
@@ -94,6 +96,7 @@ final class FastingSessionService: FastingSessionServiceProtocol {
         session.updatedAt = now
         try context.save()
         notificationService.cancelFastEndNotification(for: session)
+        rescheduleReminderForFastStart(on: session.startedAt)
     }
 
     func restoreActiveSession() throws -> FastingSession? {
@@ -103,6 +106,10 @@ final class FastingSessionService: FastingSessionServiceProtocol {
     func editSession(_ session: FastingSession, startedAt: Date, endedAt: Date?, notes: String?) throws {
         if let endedAt, startedAt >= endedAt {
             throw FastingError.invalidDateRange
+        }
+        let overlapEnd = endedAt ?? dateProvider.now
+        guard try !overlapsExistingSession(startedAt: startedAt, endedAt: overlapEnd, excluding: session.id) else {
+            throw FastingError.overlappingSession
         }
         session.startedAt = startedAt
         session.hasEnded = endedAt != nil
@@ -120,10 +127,50 @@ final class FastingSessionService: FastingSessionServiceProtocol {
 
     func softDelete(session: FastingSession) throws {
         let now = dateProvider.now
+        let wasActive = session.status == .active
         session.deletedAt = now
         session.updatedAt = now
         try context.save()
         notificationService.cancelFastEndNotification(for: session)
+        if wasActive {
+            rescheduleReminderForFastStart(on: session.startedAt)
+        }
+    }
+
+    private func cancelReminderForFastStart(on startDate: Date) {
+        notificationService.cancelReminder(weekday: weekday(for: startDate))
+    }
+
+    private func rescheduleReminderForFastStart(on startDate: Date) {
+        let weekday = weekday(for: startDate)
+        guard let schedule = schedule(for: weekday) else { return }
+        notificationService.rescheduleReminder(for: schedule, notificationsEnabled: fastingRemindersEnabled())
+    }
+
+    private func schedule(for weekday: Int) -> WeeklySchedule? {
+        do {
+            return try context.fetch(FetchDescriptor<WeeklySchedule>())
+                .first { $0.weekday == weekday }
+        } catch {
+            AppLogger.error("Failed to fetch schedule for reminder rescheduling: \(error)", category: "Notifications")
+            return nil
+        }
+    }
+
+    private func fastingRemindersEnabled() -> Bool {
+        do {
+            let descriptor = FetchDescriptor<UserSettings>(
+                sortBy: [SortDescriptor(\.createdAt, order: .forward)]
+            )
+            return try context.fetch(descriptor).first?.fastingRemindersEnabled ?? true
+        } catch {
+            AppLogger.error("Failed to fetch settings for reminder rescheduling: \(error)", category: "Notifications")
+            return true
+        }
+    }
+
+    private func weekday(for date: Date) -> Int {
+        Calendar.current.component(.weekday, from: date)
     }
 
     private func activeSessions() throws -> [FastingSession] {
@@ -133,8 +180,13 @@ final class FastingSessionService: FastingSessionServiceProtocol {
     }
 
     private func overlapsExistingSession(startedAt: Date, endedAt: Date) throws -> Bool {
+        try overlapsExistingSession(startedAt: startedAt, endedAt: endedAt, excluding: nil)
+    }
+
+    private func overlapsExistingSession(startedAt: Date, endedAt: Date, excluding excludedSessionID: UUID?) throws -> Bool {
         let sessions = try context.fetch(FetchDescriptor<FastingSession>())
         return sessions.contains { session in
+            if session.id == excludedSessionID { return false }
             guard session.deletedAt == nil, session.status != .discarded else { return false }
             let existingEnd = session.endedAt ?? dateProvider.now
             return session.startedAt < endedAt && existingEnd > startedAt

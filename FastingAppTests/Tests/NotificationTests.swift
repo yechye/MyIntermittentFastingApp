@@ -30,6 +30,67 @@ final class NotificationTests: XCTestCase {
         XCTAssertEqual(notifications.scheduledFastEndIds, [session.id])
     }
 
+    func test_upcomingReminderCancelledWhenFastStartsBeforeSchedule() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let start = calendar.date(from: DateComponents(year: 2026, month: 5, day: 4, hour: 20))!
+        let weekday = calendar.component(.weekday, from: start)
+        let container = try makeInMemoryContainer()
+        let notifications = MockNotificationService()
+        let schedule = WeeklySchedule(
+            weekday: weekday,
+            plan: nil,
+            isFastingDay: true,
+            isCheatDay: false,
+            startTimeMinutesFromMidnight: 21 * 60,
+            reminderEnabled: true,
+            updatedAt: start
+        )
+        container.mainContext.insert(schedule)
+        try container.mainContext.save()
+        let service = FastingSessionService(
+            context: container.mainContext,
+            dateProvider: MockDateProvider(start),
+            notificationService: notifications
+        )
+
+        _ = try service.startFast(plan: nil, source: .timer, date: start)
+
+        XCTAssertEqual(notifications.cancelledWeekdays, [weekday])
+    }
+
+    func test_weeklyReminderRestoredAfterEarlyStartedFastEnds() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let start = calendar.date(from: DateComponents(year: 2026, month: 5, day: 4, hour: 20))!
+        let end = start.addingTimeInterval(16 * 60 * 60)
+        let weekday = calendar.component(.weekday, from: start)
+        let container = try makeInMemoryContainer()
+        let notifications = MockNotificationService()
+        let settings = UserSettings(fastingRemindersEnabled: true, createdAt: start, updatedAt: start)
+        let schedule = WeeklySchedule(
+            weekday: weekday,
+            plan: nil,
+            isFastingDay: true,
+            isCheatDay: false,
+            startTimeMinutesFromMidnight: 21 * 60,
+            reminderEnabled: true,
+            updatedAt: start
+        )
+        container.mainContext.insert(settings)
+        container.mainContext.insert(schedule)
+        try container.mainContext.save()
+        let service = FastingSessionService(
+            context: container.mainContext,
+            dateProvider: MockDateProvider(start),
+            notificationService: notifications
+        )
+        let session = try service.startFast(plan: nil, source: .timer, date: start)
+
+        try service.endFast(session: session, at: end)
+
+        XCTAssertEqual(notifications.cancelledWeekdays, [weekday])
+        XCTAssertEqual(notifications.rescheduledWeekdays, [weekday])
+    }
+
     func test_fastEndNotificationCancelledOnEnd() throws {
         let container = try makeInMemoryContainer()
         let notifications = MockNotificationService()

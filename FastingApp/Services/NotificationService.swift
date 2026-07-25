@@ -85,14 +85,20 @@ final class NotificationService: NotificationServiceProtocol {
             return
         }
 
+        let sessionID = session.id
+        let planName = session.planName ?? AppStrings.notificationScheduledPlan
         let remainingSeconds = max(1, (session.targetFastingMinutes - elapsedMinutes) * 60)
-        let request = fastEndRequest(for: session, remainingSeconds: remainingSeconds)
+        let request = fastEndRequest(sessionID: sessionID, planName: planName, remainingSeconds: remainingSeconds)
         Task {
             guard await requestAuthorizationIfNeeded() else {
                 AppLogger.warning("Skipped fast end notification because authorization is unavailable", category: "Notifications")
                 return
             }
-            await add(request, successMessage: "Scheduled fast end notification for session \(session.id)", failureMessage: "Failed to schedule fast end notification for session \(session.id)")
+            await add(
+                request,
+                successMessage: "Scheduled fast end notification for session \(sessionID)",
+                failureMessage: "Failed to schedule fast end notification for session \(sessionID)"
+            )
         }
     }
 
@@ -101,32 +107,43 @@ final class NotificationService: NotificationServiceProtocol {
             AppLogger.debug("Skipping fast end notification cancel because notification center is unavailable", category: "Notifications")
             return
         }
-        center.removePendingNotificationRequests(withIdentifiers: [fastEndIdentifier(for: session)])
-        AppLogger.debug("Cancelled fast end notification for session \(session.id)", category: "Notifications")
+        let sessionID = session.id
+        center.removePendingNotificationRequests(withIdentifiers: [fastEndIdentifier(sessionID: sessionID)])
+        AppLogger.debug("Cancelled fast end notification for session \(sessionID)", category: "Notifications")
     }
 
     func rescheduleReminder(for schedule: WeeklySchedule, notificationsEnabled: Bool) {
-        cancelReminder(weekday: schedule.weekday)
+        let weekday = schedule.weekday
+        let reminderEnabled = schedule.reminderEnabled
+        let isFastingDay = schedule.isFastingDay
+        let startTime = schedule.startTimeMinutesFromMidnight
+        let planName = schedule.plan?.name ?? AppStrings.notificationScheduledPlan
+
+        cancelReminder(weekday: weekday)
         guard centerProvider() != nil else {
             AppLogger.debug("Skipping reminder schedule because notification center is unavailable", category: "Notifications")
             return
         }
         guard notificationsEnabled,
-              schedule.reminderEnabled,
-              schedule.isFastingDay,
-              let startTime = schedule.startTimeMinutesFromMidnight
+              reminderEnabled,
+              isFastingDay,
+              let startTime
         else {
-            AppLogger.debug("Skipping reminder for weekday \(schedule.weekday) because it is disabled or incomplete", category: "Notifications")
+            AppLogger.debug("Skipping reminder for weekday \(weekday) because it is disabled or incomplete", category: "Notifications")
             return
         }
 
-        let request = reminderRequest(for: schedule, startTime: startTime)
+        let request = reminderRequest(weekday: weekday, planName: planName, startTime: startTime)
         Task {
             guard await requestAuthorizationIfNeeded() else {
-                AppLogger.warning("Skipped reminder for weekday \(schedule.weekday) because authorization is unavailable", category: "Notifications")
+                AppLogger.warning("Skipped reminder for weekday \(weekday) because authorization is unavailable", category: "Notifications")
                 return
             }
-            await add(request, successMessage: "Scheduled reminder for weekday \(schedule.weekday)", failureMessage: "Failed to schedule reminder for weekday \(schedule.weekday)")
+            await add(
+                request,
+                successMessage: "Scheduled reminder for weekday \(weekday)",
+                failureMessage: "Failed to schedule reminder for weekday \(weekday)"
+            )
         }
     }
 
@@ -169,33 +186,33 @@ final class NotificationService: NotificationServiceProtocol {
         }
     }
 
-    private func fastEndRequest(for session: FastingSession, remainingSeconds: Int) -> UNNotificationRequest {
+    private func fastEndRequest(sessionID: UUID, planName: String, remainingSeconds: Int) -> UNNotificationRequest {
         let content = UNMutableNotificationContent()
         content.title = AppStrings.notificationFastCompleteTitle
-        content.body = AppStrings.notificationFastCompleteBody(session.planName ?? AppStrings.notificationScheduledPlan)
+        content.body = AppStrings.notificationFastCompleteBody(planName)
         content.sound = .default
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(remainingSeconds), repeats: false)
-        return UNNotificationRequest(identifier: fastEndIdentifier(for: session), content: content, trigger: trigger)
+        return UNNotificationRequest(identifier: fastEndIdentifier(sessionID: sessionID), content: content, trigger: trigger)
     }
 
-    private func reminderRequest(for schedule: WeeklySchedule, startTime: Int) -> UNNotificationRequest {
+    private func reminderRequest(weekday: Int, planName: String, startTime: Int) -> UNNotificationRequest {
         let content = UNMutableNotificationContent()
         content.title = AppStrings.notificationReminderTitle
-        content.body = AppStrings.notificationReminderBody(schedule.plan?.name ?? AppStrings.notificationScheduledPlan)
+        content.body = AppStrings.notificationReminderBody(planName)
         content.sound = .default
 
         var components = DateComponents()
-        components.weekday = schedule.weekday
+        components.weekday = weekday
         components.hour = startTime / 60
         components.minute = startTime % 60
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
-        return UNNotificationRequest(identifier: reminderIdentifier(weekday: schedule.weekday), content: content, trigger: trigger)
+        return UNNotificationRequest(identifier: reminderIdentifier(weekday: weekday), content: content, trigger: trigger)
     }
 
-    private func fastEndIdentifier(for session: FastingSession) -> String {
-        "fast-end-\(session.id.uuidString)"
+    private func fastEndIdentifier(sessionID: UUID) -> String {
+        "fast-end-\(sessionID.uuidString)"
     }
 
     private func reminderIdentifier(weekday: Int) -> String {

@@ -298,6 +298,29 @@ final class FastingSessionTests: XCTestCase {
         XCTAssertThrowsError(try service.editSession(session, startedAt: start, endedAt: start.addingTimeInterval(-1), notes: nil))
     }
 
+    func test_editSessionRejectsOverlappingSession() throws {
+        let start = Date()
+        let firstStart = start.addingTimeInterval(-40 * 60 * 60)
+        let firstEnd = start.addingTimeInterval(-24 * 60 * 60)
+        let secondStart = start.addingTimeInterval(-20 * 60 * 60)
+        let secondEnd = start.addingTimeInterval(-4 * 60 * 60)
+        let (container, service, _) = try makeService()
+        _ = container
+        let firstSession = try service.addHistoricalFast(plan: nil, startedAt: firstStart, endedAt: firstEnd, notes: nil)
+        _ = try service.addHistoricalFast(plan: nil, startedAt: secondStart, endedAt: secondEnd, notes: nil)
+
+        XCTAssertThrowsError(
+            try service.editSession(
+                firstSession,
+                startedAt: secondStart.addingTimeInterval(60 * 60),
+                endedAt: secondEnd.addingTimeInterval(-60 * 60),
+                notes: nil
+            )
+        ) { error in
+            XCTAssertEqual(error as? FastingError, .overlappingSession)
+        }
+    }
+
     func test_midnightCrossingBelongsToDayOfStart() throws {
         let calendar = Calendar.current
         let start = calendar.date(from: DateComponents(year: 2026, month: 6, day: 1, hour: 23))!

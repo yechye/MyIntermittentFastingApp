@@ -1,6 +1,6 @@
 # FeastClock App Context
 
-Last updated: 2026-06-10
+Last updated: 2026-07-25
 
 This is the living knowledge base for FeastClock. Update it whenever product requirements, naming, styling, branding, core flows, assets, or implementation details change. Treat it as the handoff file for future design and engineering work.
 
@@ -20,7 +20,7 @@ The app was previously described under names like Lume and Vitality during desig
 - Active fast behavior: show current progress, elapsed fasting time, target fasting duration, and end/discard actions.
 - Inactive behavior: show a ready-to-fast state and a start action.
 - Supporting data: streak count, latest Apple Health weight reading, water/hydration context, schedule/settings, and fasting history.
-- Fasting history: Insights shows saved completed/skipped fasts with selectable ranges, fasting/eating totals, charts, all-history grouping, CSV export, and educational fasting phases for individual fasts.
+- Fasting history: Insights shows saved completed/skipped fasts with selectable ranges, fasting/eating totals, charts, all-history grouping, CSV export, row affordances that open fast details, editable start/end times for saved fasts from the details view, delete confirmation inside the details view, and educational fasting phases for individual fasts.
 - HealthKit is part of the app surface for weight readings and health-related integration.
 - The app should preserve a native iOS feel: clear hierarchy, safe area awareness, compact controls, and polished typography.
 
@@ -157,6 +157,7 @@ Settings implementation:
 - Persisted behavior settings live in the singleton `UserSettings`: default plan, default start time, fasting reminders, fast completion alert, HealthKit weight sync, weight unit, and time format.
 - Root-level app preferences remain in `UserDefaults`: theme, in-app language, and minimum log level.
 - In-app language supports System, English, and Hebrew. Hebrew applies right-to-left layout direction and uses the Hebrew `.lproj` bundle.
+- Settings navigation chevrons follow the active layout direction so right-to-left rows point correctly in Hebrew.
 - The previous separate Eating Window Alert setting was removed; Fast Completion Alert covers the target-reached/eating-window-open notification.
 - Local notifications are permission-aware and settings-driven: fasting reminders ask for permission when enabled or scheduled, fast completion alerts ask when needed for active/new fasts, denied reminder permission restores the reminder setting to off, and notification copy is positive and localized in English and Hebrew.
 - Time format and weight unit settings are applied beyond Settings: Timer, Schedule, History rows, and fasting-history CSV export use shared formatting helpers.
@@ -209,18 +210,55 @@ Logging/debugging implementation:
 - Added targeted UI coverage for adding a missed fast from History and deleting a saved history fast.
 - Rebuilt Settings as a production SwiftData-backed page, removed the redundant eating-window alert, added in-app language selection, wired global time/weight/default-plan/default-start/notification/reset behavior, and added targeted settings tests.
 - Implemented permission-aware local notifications with localized positive reminder/completion copy, foreground presentation, active-fast completion rescheduling from Settings, and reminder rescheduling from schedule edits.
+- Fixed Settings navigation chevrons for Hebrew/right-to-left layout.
+- Added History row detail affordances plus edit/delete actions in the Fast Details view, with in-detail delete confirmation, an edit sheet for start/end time changes, and overlap protection against saved or active fasts.
+- Audited main SwiftUI screens for right-to-left directional issues, aligned Fast Details wrapped text semantically, and replaced hard-coded navigation chevrons in Schedule and Settings with layout-aware forward chevrons.
+- Corrected Hebrew Fast Details phase rows by giving each phase a full-width semantic text column, so wrapped phase content aligns consistently in right-to-left layout.
+- Updated App Intents shortcut metadata for the current SDK by using supported tile colors and direct localized resource initializers.
+- Added App Intents start-fast/end-fast execution through the existing fasting session services, including English and Hebrew shortcut phrases, localized Siri/Shortcuts dialog copy, and retained SwiftData model-container ownership for shortcut-triggered work.
+- Fixed an App Intent-triggered SwiftData crash by snapshotting notification identifiers, plan names, and schedule values before notification tasks run asynchronously.
 
 ## Verification Status
 
 Most recent build verification:
 
 ```sh
-xcodebuild -project FastingApp.xcodeproj -scheme FastingApp -destination 'generic/platform=iOS Simulator' build
+xcodebuild -project FastingApp.xcodeproj -scheme FastingApp -destination 'generic/platform=iOS Simulator' build -derivedDataPath /tmp/FeastClockDerivedData
 ```
 
-Result: succeeded without warning output after the local notifications implementation.
+Result: succeeded after the App Intent notification snapshot fix, including App Intents metadata export.
+
+Most recent App Intents and notifications verification:
+
+```sh
+xcodebuild test -project FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:FastingAppTests/FastingIntentServiceTests -only-testing:FastingAppTests/NotificationTests -derivedDataPath /tmp/FeastClockDerivedData
+```
+
+Result: succeeded, 20 targeted App Intents and notification tests passed.
+
+Most recent App Intents-only verification:
+
+```sh
+xcodebuild test -project FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:FastingAppTests/FastingIntentServiceTests -derivedDataPath /tmp/FeastClockDerivedData
+```
+
+Result: succeeded, 7 targeted App Intents service/localization/shortcut tests passed.
+
+Most recent fasting session verification:
+
+```sh
+xcodebuild test -project FastingApp.xcodeproj -scheme FastingApp -destination 'id=8CC56A0A-7CD9-4E96-83EE-70D22670B180' -only-testing:FastingAppTests/FastingSessionTests -derivedDataPath /tmp/FeastClockDerivedData
+```
+
+Result: succeeded, 24 targeted fasting session tests passed. Temporary simulator `8CC56A0A-7CD9-4E96-83EE-70D22670B180` was created for this run and deleted afterward.
 
 Most recent local notifications verification:
+
+```sh
+xcodebuild test -project FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath /tmp/FeastClockDerivedData -only-testing:FastingAppTests/NotificationTests
+```
+
+Result: succeeded, 15 targeted notification tests passed after fixing early-start reminder cancellation and restoration.
 
 ```sh
 xcodebuild test -project FastingApp.xcodeproj -scheme FastingApp -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:FastingAppTests/NotificationTests -only-testing:FastingAppTests/UserSettingsTests -only-testing:FastingAppTests/FastingSessionTests -only-testing:FastingAppTests/WeeklyScheduleTests

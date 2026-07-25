@@ -837,8 +837,9 @@ private struct ScheduleTemplatePicker: View {
                                         .multilineTextAlignment(.leading)
                                 }
                                 Spacer()
-                                Image(systemName: "chevron.right")
+                                Image(systemName: "chevron.forward")
                                     .foregroundStyle(Color.lumeSage)
+                                    .accessibilityHidden(true)
                             }
                             .padding(16)
                             .background(Color.lumeSurface, in: RoundedRectangle(cornerRadius: 12))

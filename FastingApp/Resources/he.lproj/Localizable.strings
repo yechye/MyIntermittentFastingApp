@@ -123,6 +123,16 @@
 "notification_reminder_title" = "תזכורת צום עדינה";
 "notification_reminder_body" = "צום %@ שלך מתוכנן להיום. התחילו כשזה מרגיש נכון.";
 "notification_scheduled_plan" = "מתוכנן";
+"intent_start_fast_title" = "התחלת צום";
+"intent_start_fast_short_title" = "התחלת צום";
+"intent_start_fast_description" = "התחלת טיימר צום לפי תוכנית ברירת המחדל שלך ב-FeastClock.";
+"intent_start_fast_success" = "הצום שלך התחיל.";
+"intent_start_fast_already_active" = "כבר יש לך צום פעיל.";
+"intent_end_fast_title" = "סיום צום";
+"intent_end_fast_short_title" = "סיום צום";
+"intent_end_fast_description" = "סיום הצום הפעיל ב-FeastClock ושמירתו בהיסטוריה שלך.";
+"intent_end_fast_success" = "הצום שלך נשמר.";
+"intent_end_fast_no_active_fast" = "אין צום פעיל לסיום.";
 "schedule_choose_template_summary" = "בחרו תבנית או התאימו כל יום בנפרד.";
 "schedule_intermittent_plan_text" = "צום לסירוגין %@";
 "schedule_next_start_text" = "ההתחלה הבאה: %@ בשעה %@";
@@ -209,6 +219,9 @@
 "history_delete_fast_title" = "למחוק את הצום הזה?";
 "history_delete_fast_message" = "הפעולה תסיר את הצום מההיסטוריה ומסטטיסטיקות ההתקדמות. היא לא תשפיע על הטיימר הנוכחי.";
 "history_delete_fast_button" = "מחיקת צום";
+"history_edit_fast_title" = "עריכת צום";
+"history_edit_fast_button" = "עריכת צום";
+"history_edit_fast_help" = "אפשר לעדכן את שעת ההתחלה והסיום של הצום השמור. הזמנים לא יכולים לחפוף לצום שמור או פעיל אחר.";
 "history_add_fast_title" = "הוספת צום שפוספס";
 "history_add_fast_start_label" = "התחיל";
 "history_add_fast_end_label" = "הסתיים";
